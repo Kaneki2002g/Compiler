@@ -5,11 +5,11 @@
 int yylex();
 %}
 %%
-[ \t]+					;
+[ \t\n]+				;
 #.*(\n)?$				;
 
 [_a-z]+ 				{
-						   yylval.string = strdup(yytext); 
+						   yylval.stringid = strdup(yytext); 
 						   return pidentifer; 
 						}
 		   
@@ -33,6 +33,8 @@ int yylex();
 "%"						{return MOD;}
 ":="					{return SET;}
 
+[\[\]\(\)\:\,]			{return yytext[0];}
+
 PROCEDURE				{return PROCEDURE;}
 IS						{return IS;}
 BEGIN					{return BEGIN;}
@@ -54,3 +56,4 @@ ENDFOR					{return ENDFOR;}
 DOWNTO					{return DOWNTO;}
 READ					{return READ;}
 WRITE					{return WRITE;}
+T 						{return T;}
