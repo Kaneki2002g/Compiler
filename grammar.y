@@ -1,8 +1,12 @@
 %{
 //C++ part WIP
+extern int yylineno;
 %}
+%defines "grammar.hpp"
 
 %union{
+	char* stringid;
+    long long number;
 }
 
 %token EQ NEQ GEQ LEQ GT LT SET
@@ -33,7 +37,7 @@ main         -> PROGRAM IS declarations BEGIN commands END
 commands     -> commands command
              | command
 
-command      -> identifier SET expression;
+command      -> identifier SET expression;		{std::cout<<$1<<" is set to "<<$3<<endl;}
              | IF condition THEN commands ELSE commands ENDIF
              | IF condition THEN commands ENDIF
              | WHILE condition DO commands ENDWHILE
@@ -62,28 +66,28 @@ args         -> args, pidentifier
              | pidentifier
 
 expression   -> value
-             | value ADD value
-             | value SUB value
-             | value MUL value
-             | value DIV value
-             | value MOD value
+             | value ADD value			{std::cout<<$1<<" adding to "<<$3<<endl;}
+             | value SUB value			{std::cout<<$1<<" minus "<<$3<<endl;}
+             | value MUL value			{std::cout<<$1<<" times "<<$3<<endl;}
+             | value DIV value			{std::cout<<$1<<" divide by "<<$3<<endl;
+             | value MOD value			{std::cout<<$1<<" modulo "<<$3<<endl;}
 
-condition    -> value EQ value
-             | value NEQ value
-             | value GT value
-             | value LT value
-             | value GEQ value
-             | value LEQ value
+condition    -> value EQ value			{std::cout<<$1<<"=="<<$3<<endl;}
+             | value NEQ value			{std::cout<<$1<<"!="<<$3<<endl;}
+             | value GT value			{std::cout<<$1<<">"<<$3<<endl;}
+             | value LT value			{std::cout<<$1<<"<+"<<$3<<endl;}
+             | value GEQ value			{std::cout<<$1<<">="<<$3<<endl;}
+             | value LEQ value			{std::cout<<$1<<"<="<<$3<<endl;}
 
 value        -> num
              | identifier
 
-identifier   -> pidentifier
-             | pidentifier[pidentifier]
-             | pidentifier[num]
+identifier   -> pidentifier				{$$=$1;}
+             | pidentifier[pidentifier]	{std::cout<<"calling a table field with number of different variable"/*pid[id(?) bo mozna by zrobic tez table1[table2[x]]*/<<endl;}
+             | pidentifier[num]			std::cout<<"calling table with nynber"<<endl;
 
-num			 -> NUMBER
-			 |  SUB NUMBER
+num			 -> NUMBER					{$$=$1;}
+			 |  SUB NUMBER				{$$=-$2}
 
 %%
 //C++ part WIP

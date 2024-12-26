@@ -1,7 +1,8 @@
 %option noyywrap
 %option yylineno
 %{
-#include "gramatic_y.h"
+#include "grammar.hpp"
+extern YYSTYPE yylval;
 int yylex();
 %}
 %%
@@ -33,7 +34,7 @@ int yylex();
 "%"						{return MOD;}
 ":="					{return SET;}
 
-[\[\]\(\)\:\,]			{return yytext[0];}
+[\[\]\(\)\:\,\;]			{return yytext[0];}
 
 PROCEDURE				{return PROCEDURE;}
 IS						{return IS;}
