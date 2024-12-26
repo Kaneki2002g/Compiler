@@ -5,6 +5,7 @@
 extern YYSTYPE yylval;
 int yylex();
 %}
+%option c++
 %%
 [ \t\n]+				;
 #.*(\n)?$				;
@@ -15,9 +16,17 @@ int yylex();
 						}
 		   
 [0-9]+      			{ 
-							yylval.number = atoi(yytext);
+							yylval.number = atoll(yytext);
 							return NUMBER;
 						}
+
+","						{return COMMA;}
+";"						{return SEMICOLON;}
+"["						{return SLB;}
+"]"						{return SRB;}
+"("						{return LB;}
+")"						{return RB;}
+":"						{return COLON;}
 
 "="						{return EQ;}
 "!="					{return NEQ;}
@@ -34,7 +43,7 @@ int yylex();
 "%"						{return MOD;}
 ":="					{return SET;}
 
-[\[\]\(\)\:\,\;]			{return yytext[0];}
+
 
 PROCEDURE				{return PROCEDURE;}
 IS						{return IS;}
