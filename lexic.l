@@ -1,18 +1,21 @@
 %option noyywrap
 %option yylineno
 %{
+#include <iostream>
+#include <stdlib.h>
+#include <cstring>
+
 #include "grammar.hpp"
 extern YYSTYPE yylval;
 int yylex();
 %}
-%option c++
 %%
 [ \t\n]+				;
 #.*(\n)?$				;
 
 [_a-z]+ 				{
 						   yylval.stringid = strdup(yytext); 
-						   return pidentifer; 
+						   return pidentifier; 
 						}
 		   
 [0-9]+      			{ 
@@ -44,11 +47,11 @@ int yylex();
 ":="					{return SET;}
 
 
-
+T 						{return T;}
 PROCEDURE				{return PROCEDURE;}
 IS						{return IS;}
-BEGIN					{return BEGIN;}
-END						{return END;}
+BEGIN					{return T_BEGIN;}
+END						{return T_END;}
 PROGRAM					{return PROGRAM;}
 IF						{return IF;}
 THEN					{return THEN;}
@@ -66,4 +69,4 @@ ENDFOR					{return ENDFOR;}
 DOWNTO					{return DOWNTO;}
 READ					{return READ;}
 WRITE					{return WRITE;}
-T 						{return T;}
+%%

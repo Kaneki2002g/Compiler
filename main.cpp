@@ -1,10 +1,11 @@
 #include <stdio.h>
+#include <iostream>
 #include "grammar.hpp"
 
-extern FILE* yyin; // Strumień wejściowy dla leksera
+extern FILE* yyin;
 
 void yyerror(const char* msg) {
-    cerr << "Error: " << msg << endl;
+    std::cerr << "Error: " << msg << std::endl;
 }
 
 int main(int argc, char** argv) {
@@ -16,7 +17,7 @@ int main(int argc, char** argv) {
         }
     }
 
-    std::cout<<Parsing.\n";
+    std::cout<<"Parsing.\n";
     if (yyparse() == 0) {
         std::cout<<"Parsing completed successfully.\n";
     } else {
