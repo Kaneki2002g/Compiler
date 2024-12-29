@@ -41,6 +41,8 @@ namespace vars{
 		public:
 			Table(const std::string& name, long long a, long long b) : name(name), sett(b-a+1,false), first(a), last(b), used(0), memory_cell(memCounter) {}
 	};
+	std::map<std::string, Variable> variables;
+	std::map<std::string, Table> tables;
 };
 
 void declare_var(char* name){
@@ -57,6 +59,9 @@ void setvar(char* name, char* value){
 	//TEMP
 	std::cout<<name<<" is set to "<<value<<"\n";
 	//TODO
+}
+void settab(char* name, long long pos, char* value){
+	
 }
 char* add(char* a, char* b){
 	//TEMP
@@ -93,5 +98,16 @@ char* mod(char* a, char* b){
 	
 	return strdup(std::to_string(atoll(a)%atoll(b)).c_str());
 }
-void read(){}
+void read(char* var){}
 void write(char* var){}
+/*
+*/
+char* getPosVar(char* name){
+	
+}
+char* getPosTab(char* name, char* position){
+	
+}
+char* getPosTabPID(char* table_name, char* position_variable){
+	
+}

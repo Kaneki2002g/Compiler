@@ -94,11 +94,11 @@ condition    : value EQ value			{std::cout<<$1<<"=="<<$3<<"\n";}
              | value LEQ value			{std::cout<<$1<<"<="<<$3<<"\n";}
 
 value        : num						{$$=strdup(std::to_string($1).c_str());/*debilne ale moze zadziala*/}
-             | identifier				{$$=$1;}
+             | identifier				{$$=$1;/*if not set error*/}
 
 identifier   : pidentifier				{$$=$1;}
-             | pidentifier SLB pidentifier SRB	{std::cout<<"calling a table field with number of different variable"/*pid[id(?) bo mozna by zrobic tez table1[table2[x]]*/<<"\n";}
-             | pidentifier SLB num SRB			{std::cout<<"calling table with nynber"<<"\n";}
+             | pidentifier SLB pidentifier SRB	{}
+             | pidentifier SLB num SRB			{}
 
 num			 : NUMBER					{$$=$1;}
 			 |  SUB NUMBER				{$$=-$2;}
