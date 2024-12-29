@@ -8,7 +8,6 @@ int posCounter = 0;
 namespace vars{
 	class Variable{
 		public:
-			Variable(const std::string& name) : name(name), used(0), sett(false), memory_cell(memCounter) {}
 			void use(){used++;}
 			void set(){sett=true;}
 			bool isSet(){return sett;}
@@ -17,31 +16,32 @@ namespace vars{
 			unsigned long long int getPos(){return memory_cell;}
 		private:
 			std::string name;
-			bool sett;
 			int used;
+			bool sett;
 			unsigned long long int memory_cell;
-	}
+		public:
+			Variable(const std::string& name) : name(name), used(0), sett(false), memory_cell(memCounter) {}
+	};
 	
 	class Table{
 		public:
-			Table(const std::string& name, long long a, long long b) : name(name), first(a), last(b), used(0), memory_cell(memCounter) {
-				sett = std::vector<bool> fields(b-a+1,false);
-			}
 			void use(){used++;}
 			void set(long long i){sett[i]=true;}
 			bool isSet(long long i){return sett[i];}
 			int timesUsed(){return used;}
 			std::string getName(){return name;}
-			unsigned long long int getPos(long long i){return memory_cell+(i-first);/*TODO - Check if (i-first+1) is better && Guard, for OutOfBounds type error*/
+			unsigned long long int getPos(long long i){return memory_cell+(i-first);/*TODO - Check if (i-first+1) is better && Guard, for OutOfBounds type error*/}
 		private:
-			long long first;
-			long long last;
 			std::string name;
 			std::vector<bool> sett;
+			long long first;
+			long long last;
 			int used;
 			unsigned long long int memory_cell;
-	}
-}
+		public:
+			Table(const std::string& name, long long a, long long b) : name(name), sett(b-a+1,false), first(a), last(b), used(0), memory_cell(memCounter) {}
+	};
+};
 
 void declare_var(char* name){
 	//TEMP
@@ -93,5 +93,5 @@ char* mod(char* a, char* b){
 	
 	return strdup(std::to_string(atoll(a)%atoll(b)).c_str());
 }
-void read()
-void write()
+void read(){}
+void write(char* var){}
