@@ -9,14 +9,15 @@ CXXFLAGS = -std=c++17 -Wall -Wextra
 LEXER_SRC = lexic.l
 PARSER_SRC = grammar.y
 MAIN_SRC = main.cpp
+LOGIC_SRC = brainpart.cpp
 
 # Pliki wygenerowane
-LEXER_CPP = lexer.cpp
-PARSER_CPP = parser.cpp
-PARSER_HPP = parser.hpp
+LEXER_CPP = lexic.cpp
+PARSER_CPP = grammar.cpp
+PARSER_HPP = grammar.hpp
 
 # Obiekty do kompilacji
-OBJECTS = $(LEXER_CPP:.cpp=.o) $(PARSER_CPP:.cpp=.o) main.o
+OBJECTS = $(LEXER_CPP:.cpp=.o) $(PARSER_CPP:.cpp=.o) main.o brainpart.o
 
 # Reguła domyślna
 all: $(TARGET)

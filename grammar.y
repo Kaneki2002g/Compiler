@@ -1,6 +1,9 @@
 %{
 //C++ part WIP
 #include <iostream>
+#include <cstring>
+#include <stdlib.h>
+#include "brainpart.hpp"
 extern int yylineno;
 
 int yylex();
@@ -27,8 +30,8 @@ void yyerror(const char* msg);
 %token <number> NUMBER
 %type <number> num
 %type <stringid> identifier
-%type <number> value
-%type <number> expression
+%type <stringid> value
+%type <stringid> expression
 
 %left ADD SUB
 %left MUL DIV
@@ -48,7 +51,7 @@ main         : PROGRAM IS declarations T_BEGIN commands T_END
 commands     : commands command
              | command
 
-command      : identifier SET expression SEMICOLON		{std::cout<<$1<<" is set to "<<$3<<"\n";}
+command      : identifier SET expression SEMICOLON		{setvar($1,$3);}
              | IF condition THEN commands ELSE commands ENDIF
              | IF condition THEN commands ENDIF
              | WHILE condition DO commands ENDWHILE
@@ -56,17 +59,17 @@ command      : identifier SET expression SEMICOLON		{std::cout<<$1<<" is set to 
              | FOR pidentifier FROM value TO value DO commands ENDFOR
              | FOR pidentifier FROM value DOWNTO value DO commands ENDFOR
              | proc_call SEMICOLON
-             | READ identifier SEMICOLON
-             | WRITE value SEMICOLON
+             | READ identifier SEMICOLON	{std::cout<<"Reading "<<$2<<"\n";}
+             | WRITE value SEMICOLON		{std::cout<<"Writing "<<$2<<"\n";}
 
 proc_head    : pidentifier LB args_decl RB
 
 proc_call    : pidentifier LB args RB
 
-declarations : declarations COMMA pidentifier
-             | declarations COMMA pidentifier SLB num COLON num SRB
-             | pidentifier
-             | pidentifier SLB num COLON num SRB
+declarations : declarations COMMA pidentifier	{declare_var($3);}
+             | declarations COMMA pidentifier SLB num COLON num SRB	{declare_tab($3,$5,$7);}
+             | pidentifier						{declare_var($1);}
+             | pidentifier SLB num COLON num SRB	{declare_tab($1,$3,$5);}
 
 args_decl    : args_decl COMMA pidentifier
              | args_decl COMMA T pidentifier
@@ -77,11 +80,11 @@ args         : args COMMA pidentifier
              | pidentifier
 
 expression   : value
-             | value ADD value			{std::cout<<$1<<" adding to "<<$3<<"\n";$$=$1+$3;}
-             | value SUB value			{std::cout<<$1<<" minus "<<$3<<"\n";$$=$1-$3;}
-             | value MUL value			{std::cout<<$1<<" times "<<$3<<"\n";$$=$1*$3;}
-             | value DIV value			{std::cout<<$1<<" divide by "<<$3<<"\n";$$=$1-$3;}
-             | value MOD value			{std::cout<<$1<<" modulo "<<$3<<"\n";$$=$1 % $3;}
+             | value ADD value			{$$=add($1,$3);}
+             | value SUB value			{$$=sub($1,$3);}
+             | value MUL value			{$$=mul($1,$3);}
+             | value DIV value			{$$=div($1,$3);}
+             | value MOD value			{$$=mod($1,$3);}
 
 condition    : value EQ value			{std::cout<<$1<<"=="<<$3<<"\n";}
              | value NEQ value			{std::cout<<$1<<"!="<<$3<<"\n";}
@@ -90,8 +93,8 @@ condition    : value EQ value			{std::cout<<$1<<"=="<<$3<<"\n";}
              | value GEQ value			{std::cout<<$1<<">="<<$3<<"\n";}
              | value LEQ value			{std::cout<<$1<<"<="<<$3<<"\n";}
 
-value        : num						{$$=$1;}
-             | identifier				{$$=1000;}
+value        : num						{$$=strdup(std::to_string($1).c_str());/*debilne ale moze zadziala*/}
+             | identifier				{$$=$1;}
 
 identifier   : pidentifier				{$$=$1;}
              | pidentifier SLB pidentifier SRB	{std::cout<<"calling a table field with number of different variable"/*pid[id(?) bo mozna by zrobic tez table1[table2[x]]*/<<"\n";}
