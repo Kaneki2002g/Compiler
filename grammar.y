@@ -97,7 +97,7 @@ value        : num						{$$=strdup(std::to_string($1).c_str());/*debilne ale moz
              | identifier				{$$=$1;/*if not set error*/}
 
 identifier   : pidentifier				{$$=$1;}
-             | pidentifier SLB pidentifier SRB	{}
+             | pidentifier SLB pidentifier SRB	{$$=strcpy(strcpy(strcpy($1,'['),$3),']');}
              | pidentifier SLB num SRB			{}
 
 num			 : NUMBER					{$$=$1;}
