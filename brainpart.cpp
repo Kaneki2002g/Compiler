@@ -4,6 +4,7 @@
 
 int memCounter = 1;
 int posCounter = 0;
+int helpCounter = 0;
 
 namespace vars{
 	class Variable{
@@ -101,7 +102,7 @@ char* mod(char* a, char* b){
 void read(char* var){}
 void write(char* var){}
 /*
-*/
+
 char* getPosVar(char* name){
 	
 }
@@ -110,4 +111,11 @@ char* getPosTab(char* name, char* position){
 }
 char* getPosTabPID(char* table_name, char* position_variable){
 	
+}
+*/
+int getHelpCounter(){
+	return helpCounter;
+}
+void zeroHelpCounter(){
+	helpCounter = 0;
 }
