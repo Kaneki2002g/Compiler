@@ -57,9 +57,9 @@ struct Component{
 		1 - with declarations
 		2 - without declarations
 	15 - procedures
+		  - start of list
 		1 - with declarations
 		2 - without declarations
-		3 - empty
 	16 - all
 	
 	*/

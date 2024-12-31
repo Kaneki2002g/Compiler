@@ -46,14 +46,22 @@ namespace vars{
 	std::map<std::string, Table> tables;
 };
 
-void declare_var(char* name){
+Component* lastnext(Component* comp){
+		Component* tot = comp;
+		while(tot->next!=nullptr){
+			tot=tot->next;
+			}
+		return tot;
+}
+
+void declare_var(Component* declaration){
 	//TEMP
-	std::cout<<"declaring "<<name<<" variable!\n";
+	std::cout<<"declaring "<<declaration->pid_name<<" variable!\n";
 	//TODO
 }
-void declare_tab(char* name, long long a, long long b){
+void declare_tab(Component* declaration){
 	//TEMP
-	std::cout<<"declaring "<<name<<" table!\n";
+	std::cout<<"declaring "<<declaration->pid_name<<" table with bounds:"<<declaration->children->number_value<<" : "<<declaration->children->next->number_value<<"\n";
 	//TODO
 }
 void setvar(char* name, char* value){
@@ -101,21 +109,84 @@ char* mod(char* a, char* b){
 }
 void read(char* var){}
 void write(char* var){}
-/*
 
-char* getPosVar(char* name){
-	
-}
-char* getPosTab(char* name, char* position){
-	
-}
-char* getPosTabPID(char* table_name, char* position_variable){
-	
-}
-*/
 int getHelpCounter(){
 	return helpCounter;
 }
 void zeroHelpCounter(){
 	helpCounter = 0;
 }
+
+
+void buildProgram(Component* all){
+	Component* a = all->children; //a = {[procedures], main}
+	buildProcedures(a);
+	buildMain(a->next);
+	/*
+	Component* b = a->children; //b = {[procedure0(empty)], procedure1, ...}
+	while(b != nullptr){
+		std::cout<<"TYPE: "<<b->type<<"\n"; //printowanie typu procedur
+		b=b->next;
+	}*/
+}
+void buildProcedures(Component* procedures){
+	
+}
+void buildMain(Component* main){
+	if(main->type==141){
+		declareVariables(main->children);
+	}
+	buildCommands(main->children->next);
+}
+void declareVariables(Component* declarations){
+	//if we are here, then there's at least one variable declared
+	Component* decl = declarations->children;
+	while(decl!=nullptr){
+		if(decl->type==21){ //variable
+			declare_var(decl);
+		} else if(decl->type==22){ //table
+			declare_tab(decl);
+		} else{
+			std::cout<<"DECL: SHOULD NOT GET HERE WITH TYPE: "<<decl->type<<"!\n";
+		}
+		decl=decl->next;
+	}
+}
+void buildCommands(Component* commands){
+	
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

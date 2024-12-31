@@ -62,8 +62,9 @@ program_all  : procedures main		{
 										$$->number_value=0;
 										$$->pid_name=nullptr;
 										$$->children=$1;
-										lastnext($1)->next = $2;
+										$1->next = $2;
 										$$->next=nullptr;
+										buildProgram($$);
 									}
 
 procedures   : procedures PROCEDURE proc_head IS declarations T_BEGIN commands T_END	{	
@@ -74,25 +75,35 @@ procedures   : procedures PROCEDURE proc_head IS declarations T_BEGIN commands T
 																							proc->number_value=0;
 																							proc->pid_name=nullptr;
 																							proc->children=$3;
+																							proc->next=nullptr;
 																							$3->next=$5;
 																							$5->next=$7;
-																							lastnext($$)->next=nullptr;
+																							if($$->children==nullptr){
+																								$$->children=proc; //first procedure
+																							} else {
+																								lastnext($$->children)->next=proc;
+																							}
 																						}
              | procedures PROCEDURE proc_head IS T_BEGIN commands T_END					{	
-																							$$=$1;
+																							$$=$1; //procedures
 																							Component* proc = new Component();
 																							proc->code_line=yylineno;
 																							proc->type=152;
 																							proc->number_value=0;
 																							proc->pid_name=nullptr;
 																							proc->children=$3;
+																							proc->next=nullptr;
 																							$3->next=$6;
-																							lastnext($$)->next=nullptr;
+																							if($$->children==nullptr){
+																								$$->children=proc; //first procedure
+																							} else {
+																								lastnext($$->children)->next=proc;
+																							}
 																						}
              | 																			{
 																							$$ = new Component();
 																							$$->code_line=0;
-																							$$->type=153;
+																							$$->type=15;
 																							$$->number_value=0;
 																							$$->pid_name=nullptr;
 																							$$->children=nullptr;
@@ -121,7 +132,7 @@ main         : PROGRAM IS declarations T_BEGIN commands T_END	{
 
 commands     : commands command		{	
 										$$=$1;
-										lastnext($$)->next=$2;
+										lastnext($$->children)->next=$2;
 									}
              | command				{	
 										$$ = new Component();
@@ -130,6 +141,7 @@ commands     : commands command		{
 										$$->number_value=0;
 										$$->pid_name=nullptr;
 										$$->children=$1;
+										$$->next=nullptr;
 									}
 
 command      : identifier SET expression SEMICOLON							{	
@@ -303,8 +315,8 @@ declarations : declarations COMMA pidentifier						{
 																		pid->type=22; //type=pidentifier;
 																		pid->number_value=0;
 																		pid->pid_name=strdup($3);
-																		pid->children=nullptr;
-																		pid->next=$5;
+																		pid->children=$5;
+																		pid->next=nullptr;
 																		$5->next=$7;
 																		
 																		$$=$1;
@@ -333,8 +345,8 @@ declarations : declarations COMMA pidentifier						{
 																		pid->type=22; //type=pidentifier;
 																		pid->number_value=0;
 																		pid->pid_name=strdup($1);
-																		pid->children=nullptr;
-																		pid->next=$3;
+																		pid->children=$3;
+																		pid->next=nullptr;
 																		$3->next=$5;
 																		
 																		$$ = new Component();
@@ -656,10 +668,3 @@ num			 : NUMBER					{
 										}
 
 %%
-Component* lastnext(Component* comp){
-		Component* tot = comp;
-		while(tot->next!=nullptr){
-			tot=tot->next;
-			}
-		return tot;
-}
