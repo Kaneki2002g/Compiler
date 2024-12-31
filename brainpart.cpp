@@ -130,7 +130,10 @@ void buildProgram(Component* all){
 	}*/
 }
 void buildProcedures(Component* procedures){
-	
+	Component* procedure = procedures->children;
+	while(procedure!=nullptr){
+		//TODO:Procedure translation
+	}
 }
 void buildMain(Component* main){
 	if(main->type==141){
@@ -153,7 +156,12 @@ void declareVariables(Component* declarations){
 	}
 }
 void buildCommands(Component* commands){
-	
+	Component* comm = commands->children;
+	while(comm!=nullptr){
+		std::cout<<"TYPE: "<<comm->type<<"\n";
+		//TODO: command translation
+		comm=comm->next;
+	}
 }
 
 
