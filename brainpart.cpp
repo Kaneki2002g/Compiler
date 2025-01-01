@@ -197,9 +197,49 @@ long long getMemCell(Component* call){
 
 //ARITHMETIC FUNCTIONS
 //TODO
+void loadORset(Component* value){
+	Component* check = value->children;
+	if(check->type==1){
+		SET(check->number_value);
+	} else {
+		LOAD(getMemCell(check));
+	}
+}
 void doArithmetic(Component* varsetexp){
-	std::string name(varsetexp->children->pid_name);
-	
+	//ID := EXPR
+	long long adr = getMemCell(varsetexp->children);
+	Component* expr = varsetexp->children->next;
+	//VALUES
+	Component* first = expr->children;
+	Component* second = expr->children->next;//may be nullptr
+	switch(expr->type){
+		case 61:
+			loadORset(first);
+		break;
+		case 62:
+			if(first->children->type==1 && second->children->type==1){
+				SET(first->children->number_value+second->children->number_value); //MAY GO OUT OF LONG LONG BOUNDARIES SHOULD MAKE TEXT_CONVERSION_ADD
+			} else if(first->children->type!=1 && second->children->type==1){
+				SET(second->children->number_value);
+				ADD(getMemCell(first->children));
+			}else if(first->children->type==1 && second->children->type!=1){
+				SET(first->children->number_value);
+				ADD(getMemCell(second->children));
+			}else{
+				LOAD(getMemCell(first->children));
+				ADD(getMemCell(second->children));
+			}
+		break;
+		case 63:
+		break;
+		case 64:
+		break;
+		case 65:
+		break;
+		case 66:
+		break;
+	}
+	STORE(adr);
 }
 
 
