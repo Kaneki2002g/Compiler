@@ -20,6 +20,10 @@ char* mod(char* a, char* b);
 void read(char* var);
 void write(char* var);
 
+void useMul();
+void useDiv();
+void useMod();
+
 void buildProgram(Component* all);
 void buildProcedures(Component* procedures);
 void buildMain(Component* main);
