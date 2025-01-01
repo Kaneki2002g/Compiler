@@ -3,6 +3,7 @@
 //#include <vector> to w brainpart.hpp
 
 long long memCounter = 1;
+long long ASSLINE = 0;
 long long posCounter = 0;
 long long helpCounter = 0;
 
@@ -49,10 +50,75 @@ namespace vars{
 		public:
 			Table(const std::string& name, long long a, long long b) : name(name), sett(b-a+1,false), first(a), last(b), used(0), memory_cell(memCounter) {}
 	};
+	
+	class Procedure{
+		public:
+			Procedure(const std::string& name){
+				
+			}
+		private:
+	};
 };
 
 std::map<std::string, vars::Variable> variables;
 std::map<std::string, vars::Table> tables;
+std::map<std::string,vars::Procedure> procedures;
+
+void toProg(std::string comm, long long i){
+	//TEMP
+	std::cout<<comm<<" "<<i<<"\n";
+	ASSLINE++;
+}
+
+void GET(long long i){
+	toProg("GET",i);
+}
+void PUT(long long i){
+	toProg("PUT",i);
+}
+void LOAD(long long i){
+	toProg("LOAD",i);
+}
+void STORE(long long i){
+	toProg("STORE",i);
+}
+void LOADI(long long i){
+	toProg("LOADI",i);
+}
+void STOREI(long long i){
+	toProg("STOREI",i);
+}
+void ADD(long long i){
+	toProg("ADD",i);
+}
+void SUB(long long i){
+	toProg("SUB",i);
+}
+void ADDI(long long i){
+	toProg("ADDI",i);
+}
+void SUBI(long long i){
+	toProg("SUBI",i);
+}
+void SET(long long i){
+	toProg("SET",i);
+}
+void HALF(long long i){
+	toProg("HALF",i);
+}
+void JUMP(long long i){
+	toProg("JUMP",i);
+}
+void JPOS(long long i){
+	toProg("JPOS",i);
+}
+void JZERO(long long i){
+	toProg("JZERO",i);
+}
+void JNEG(long long i){
+	toProg("JNEG",i);
+}
+
 
 void memInc(long long inc = 1){
 	memCounter += inc;
@@ -69,22 +135,14 @@ Component* lastnext(Component* comp){
 
 //VARIABLE MANIPULATION FUNCTIONS
 void declare_var(Component* declaration){
-	//TEMP
-	//std::cout<<"declaring "<<declaration->pid_name<<" variable!\n";
-	//TODO
 	std::string name(declaration->pid_name);
 	vars::Variable var(name);
-	//variables[name]=var;
 	variables.emplace(name,var);
 	memInc();
 }
 void declare_tab(Component* declaration){
-	//TEMP
-	//std::cout<<"declaring "<<declaration->pid_name<<" table with bounds:"<<declaration->children->number_value<<" : "<<declaration->children->next->number_value<<"\n";
-	//TODO
 	std::string name(declaration->pid_name);
 	vars::Table tab(name,declaration->children->number_value,declaration->children->next->number_value);
-	//tables[name]=tab;
 	tables.emplace(name,tab);
 	memInc((declaration->children->next->number_value)-(declaration->children->number_value)+1);
 }
@@ -97,7 +155,6 @@ void settab(char* name, long long pos, char* value){
 	
 }
 long long getMemCell(Component* call){
-	//std::cout<<"getmemcell\n";
 	long long outcome=-1;
 	if(call->type==31){//normal variable
 		std::string name(call->children->pid_name);
@@ -113,18 +170,21 @@ long long getMemCell(Component* call){
 		try{
 			vars::Table tab = tables.at(name);
 			outcome = tab.getPos(call->next->number_value);
+			//TODO
+			//error if out of bounds
 		}catch(const std::out_of_range& e){
 			//TODO
 			//throw error at varline
 			//or if out of bounds
 		}
-	} else if(call->type==33){
+	} else if(call->type==33){//table[variable]
 		std::string name(call->children->pid_name);
 		try{
 			vars::Table tab = tables.at(name);
 			//outcome = tab.getPos(call->next->number_value);
 			//TODO
 			//indirect call
+			//throw error if variable is table
 		}catch(const std::out_of_range& e){
 			//TODO
 			//throw error at varline
@@ -137,51 +197,13 @@ long long getMemCell(Component* call){
 
 //ARITHMETIC FUNCTIONS
 //TODO
-char* add(char* a, char* b){
-	//TEMP
-	std::cout<<a<<" add to "<<b<<"\n";
-	//TODO
+void doArithmetic(Component* varsetexp){
+	std::string name(varsetexp->children->pid_name);
 	
-	return strdup(std::to_string(atoll(a)+atoll(b)).c_str());
-}
-char* sub(char* a, char* b){
-	//TEMP
-	std::cout<<a<<" sub to "<<b<<"\n";
-	//TODO
-	
-	return strdup(std::to_string(atoll(a)-atoll(b)).c_str());
-}
-char* mul(char* a, char* b){
-	//TEMP
-	std::cout<<a<<" mul to "<<b<<"\n";
-	//TODO
-	
-	return strdup(std::to_string(atoll(a)*atoll(b)).c_str());
-}
-char* div(char* a, char* b){
-	//TEMP
-	std::cout<<a<<" div to "<<b<<"\n";
-	//TODO
-	
-	return strdup(std::to_string(atoll(a)/atoll(b)).c_str());
-}
-char* mod(char* a, char* b){
-	//TEMP
-	std::cout<<a<<" mod to "<<b<<"\n";
-	//TODO
-	
-	return strdup(std::to_string(atoll(a)%atoll(b)).c_str());
-}
-void read(char* var){}
-void write(char* var){}
-
-int getHelpCounter(){
-	return helpCounter;
-}
-void zeroHelpCounter(){
-	helpCounter = 0;
 }
 
+
+//PROGRAM BUILDING FUNCTIONS
 void useMul(){mulUses++;}
 void useDiv(){divUses++;}
 void useMod(){modUses++;}
@@ -197,13 +219,29 @@ void buildProgram(Component* all){
 		b=b->next;
 	}*/
 }
+
+
+//PROCEDURE MAKING
+void makeProcedure(Component* procedure){
+	if(procedure->type==151){//with declarations-registers
+		std::cout<<"#PROCEDURE "<<procedure->children->children->pid_name<<"\n";
+		
+	}else if(procedure->type==152){//without declarations
+		std::cout<<"#PROCEDURE "<<procedure->children->children->pid_name<<"\n";
+	}else{
+		std::cout<<"MKPROC:SHOULD NOT GET HERE WITH TYPE:"<<procedure->type<<"\n";
+	}
+}
 void buildProcedures(Component* procedures){
 	Component* procedure = procedures->children;
 	while(procedure!=nullptr){
 		//TODO:Procedure translation
+		makeProcedure(procedure);
 		procedure=procedure->next;
 	}
 }
+
+//MAIN MAKING
 void buildMain(Component* main){
 	if(main->type==141){
 		declareVariables(main->children);
@@ -231,8 +269,9 @@ void buildCommands(Component* commands){
 		//std::cout<<"TYPE: "<<comm->type;
 		switch(comm->type){
 			case 121:
-			std::cout<<"set"<<std::endl;
+			//std::cout<<"set"<<std::endl;
 			//set
+			doArithmetic(comm);
 			break;
 			case 122:
 			std::cout<<"ifthenelse"<<std::endl;
@@ -259,23 +298,35 @@ void buildCommands(Component* commands){
 			//for...from...downto...do...
 			break;
 			case 128:
-			std::cout<<"proccall"<<std::endl;
+			//TODO
+			//std::cout<<"proccall"<<std::endl;
 			//std::cout<<"LINE: "<<comm->code_line<<"\n";
 			//proc_call
 			break;
 			case 129:
-			//if pidentifier or pidentifier[num]
-			long long memoryPlace = getMemCell(comm->children);
-			std::cout<<"GET "<<memoryPlace<<std::endl;
-			//if pidentifier[pidentifier]
-			//TODO
+				{
+					long long memoryPlace = getMemCell(comm->children);
+					//std::cout<<"GET "<<memoryPlace<<std::endl;
+					GET(memoryPlace);
+				}
 			break;
 			case 1210:
-			std::cout<<"PUT "<<"WIP"<<std::endl;
-			//write
+				{
+					long long printMemPlace;
+					if(comm->children->type==41){
+						//std::cout<<"SET "<<comm->children->children->number_value<<"\n";
+						SET(comm->children->children->number_value);
+						printMemPlace = 0;
+					}else if(comm->children->type==42){
+						printMemPlace = getMemCell(comm->children->children);
+					}else{
+						std::cout<<"SHOULD NOT GET HERE WITH TYPE:"<<comm->children->type<<"\n";
+					}
+					PUT(printMemPlace);
+					//std::cout<<"PUT "<<printMemPlace<<std::endl;
+				}
 			break;
 		}
-		//TODO: command translation
 		comm=comm->next;
 	}
 }
