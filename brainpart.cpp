@@ -12,6 +12,7 @@ int divUses=0;
 int modUses=0;
 
 std::map<std::string,int> procedure_uses;
+std::stack<long long> returnLines;
 
 namespace vars{
 	class Variable{
@@ -132,6 +133,33 @@ Component* lastnext(Component* comp){
 		return tot;
 }
 
+void addMUL(long long reg_A, long long reg_B, long long reg_O, long long reg_R){
+	/*
+	SET(0);
+	STORE(reg_O);
+	LOAD(reg_B);
+	JZERO(18)
+	HALF();
+	JZERO(14);
+	ADD(0);
+	SUB(reg_B);
+	JZERO(4);
+	LOAD(reg_O);
+	ADD(reg_A);
+	STORE(reg_O);
+	LOAD(reg_B);
+	HALF;
+	STORE(reg_B);
+	LOAD(reg_A);
+	ADD(0);
+	STORE(reg_A);
+	JUMP(-16);
+	LOAD(W);
+	ADD(A);
+	RTRN(reg_R);
+	*/
+}
+
 
 //VARIABLE MANIPULATION FUNCTIONS
 void declare_var(Component* declaration){
@@ -195,7 +223,7 @@ long long getMemCell(Component* call){
 	return outcome;
 }
 
-//ARITHMETIC FUNCTIONS
+//ARITHMETIC/LOGIC FUNCTIONS
 //TODO
 void loadORset(Component* value){
 	Component* check = value->children;
@@ -205,23 +233,23 @@ void loadORset(Component* value){
 		LOAD(getMemCell(check));
 	}
 }
-void doArithmetic(Component* varsetexp){
+void doArithmetic(Component* expr){
 	//ID := EXPR
-	long long adr = getMemCell(varsetexp->children);
-	Component* expr = varsetexp->children->next;
+	//long long adr = getMemCell(varsetexp->children);
+	//Component* expr = varsetexp->children->next;
 	//VALUES
 	Component* first = expr->children;
-	Component* second = expr->children->next;//may be nullptr
+	Component* second = expr->children->next;//NOTE: may be nullptr
 	switch(expr->type){
 		case 61:
 			loadORset(first);
 		break;
 		case 62:
 			if(first->children->type==1 && second->children->type==1){
-				SET(first->children->number_value+second->children->number_value); //MAY GO OUT OF LONG LONG BOUNDARIES SHOULD MAKE TEXT_CONVERSION_ADD
+				SET(first->children->number_value+second->children->number_value); //NOTE: MAY GO OUT OF LONG LONG BOUNDARIES SHOULD MAKE TEXT_CONVERSION_ADD
 			} else if(first->children->type!=1 && second->children->type==1){
 				SET(second->children->number_value);
-				ADD(getMemCell(first->children));
+				ADD(getMemCell(first->children));	//NOTE: getMemCell should throw error when trying to get address of loop variable out of said loop
 			}else if(first->children->type==1 && second->children->type!=1){
 				SET(first->children->number_value);
 				ADD(getMemCell(second->children));
@@ -231,17 +259,64 @@ void doArithmetic(Component* varsetexp){
 			}
 		break;
 		case 63:
+			if(first->children->type==1 && second->children->type==1){
+				SET(first->children->number_value-second->children->number_value); //NOTE: MAY GO OUT OF LONG LONG BOUNDARIES SHOULD MAKE TEXT_CONVERSION_ADD and SET(string)
+			} else if(first->children->type!=1 && second->children->type==1){
+				SET(-(second->children->number_value)); // a - b = -b + a
+				ADD(getMemCell(first->children));
+			}else if(first->children->type==1 && second->children->type!=1){
+				SET(first->children->number_value);
+				SUB(getMemCell(second->children));
+			}else{
+				LOAD(getMemCell(first->children));
+				SUB(getMemCell(second->children));
+			}
 		break;
-		case 64:
+		case 64://NOTE: MUL,DIV,MOD - should be functions(if needed) with copied values instead of references
+		//TODO
 		break;
 		case 65:
+		//TODO
 		break;
 		case 66:
+		//TODO
 		break;
 	}
-	STORE(adr);
+	//STORE(adr);
 }
+void conditionalize(Component* condition){
+	Component* first = condition->children;
+	Component* second = first->next;
+	Component* fidornum = first->children;
+	Component* sidornum = second->children;
+	switch(condition->type){
+		case 51://==
+			if(first->type==41 && second->type==41){
+				if(sidornum->number_value==fidornum->number_value){
+					//DO
+				} else{
+					//SKIP
+				}
+			}else if (first->type!=1 && second->type==41){
 
+			}else if (first->type==41 && second->type!=41){
+
+			}else{
+
+			}
+		break;
+		case 52://!=
+		break;
+		case 53://>
+		break;
+		case 54://<
+		break;
+		case 55://>=
+		break;
+		case 56://<=
+		break;
+	}
+}
 
 //PROGRAM BUILDING FUNCTIONS
 void useMul(){mulUses++;}
@@ -252,12 +327,6 @@ void buildProgram(Component* all){
 	Component* a = all->children; //a = {[procedures], main}
 	buildProcedures(a);
 	buildMain(a->next);
-	/*
-	Component* b = a->children; //b = {[procedure0(empty)], procedure1, ...}
-	while(b != nullptr){
-		std::cout<<"TYPE: "<<b->type<<"\n"; //printowanie typu procedur
-		b=b->next;
-	}*/
 }
 
 
@@ -303,44 +372,57 @@ void declareVariables(Component* declarations){
 		decl=decl->next;
 	}
 }
+void ifthenelse(Component* comm){
+	Component* condition = comm->children;
+	Component* then = condition->next;
+	Component* elsse = then->next;
+}
+void ifthenelse(Component* comm){
+	Component* condition = comm->children;
+	Component* then = condition->next;
+}
 void buildCommands(Component* commands){
 	Component* comm = commands->children;
 	while(comm!=nullptr){
 		//std::cout<<"TYPE: "<<comm->type;
 		switch(comm->type){
-			case 121:
-			//std::cout<<"set"<<std::endl;
-			//set
-			doArithmetic(comm);
+			case 121://TODO:ERROR IF SETTING LOOP VARIABLE
+			long long adr = getMemCell(comm->children);
+			doArithmetic(comm->children->next);
+			STORE(adr);
 			break;
-			case 122:
-			std::cout<<"ifthenelse"<<std::endl;
-			//if...then...else...
+			case 122:{
+				//ifthenelse
+				ifthenelse(comm);
+			}
 			break;
-			case 123:
-			std::cout<<"ifthen"<<std::endl;
-			//if...then...
+			case 123:{
+				//ifthen
+				ifthen(comm);
+			}
 			break;
 			case 124:
+			//TODO
 			std::cout<<"whiledo"<<std::endl;
 			//while...do
 			break;
 			case 125:
+			//TODO
 			std::cout<<"repeatunitl"<<std::endl;
 			//repeatuntil
 			break;
 			case 126:
+			//TODO
 			std::cout<<"forfromtodo"<<std::endl;
 			//for...from...to...do...
 			break;
 			case 127:
+			//TODO
 			std::cout<<"forfromdowntodo"<<std::endl;
 			//for...from...downto...do...
 			break;
 			case 128:
 			//TODO
-			//std::cout<<"proccall"<<std::endl;
-			//std::cout<<"LINE: "<<comm->code_line<<"\n";
 			//proc_call
 			break;
 			case 129:
@@ -354,16 +436,15 @@ void buildCommands(Component* commands){
 				{
 					long long printMemPlace;
 					if(comm->children->type==41){
-						//std::cout<<"SET "<<comm->children->children->number_value<<"\n";
 						SET(comm->children->children->number_value);
 						printMemPlace = 0;
 					}else if(comm->children->type==42){
 						printMemPlace = getMemCell(comm->children->children);
 					}else{
+						printMemPlace = -1;
 						std::cout<<"SHOULD NOT GET HERE WITH TYPE:"<<comm->children->type<<"\n";
 					}
 					PUT(printMemPlace);
-					//std::cout<<"PUT "<<printMemPlace<<std::endl;
 				}
 			break;
 		}

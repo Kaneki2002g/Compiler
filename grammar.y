@@ -485,7 +485,9 @@ expression   : value					{
 											$$->children=$1;
 											$1->next=$3;
 											$$->next=nullptr;
-											useMul();
+											if($1->children->type!=1 && $3->children->type!=1){
+												useMul();
+											}
 										}
              | value DIV value			{	
 											$$ = new Component();
@@ -496,7 +498,9 @@ expression   : value					{
 											$$->children=$1;
 											$1->next=$3;
 											$$->next=nullptr;
-											useDiv();
+											if($1->children->type!=1 && $3->children->type!=1){
+												useDiv();
+											}
 										}
              | value MOD value			{	
 											$$ = new Component();
@@ -507,7 +511,9 @@ expression   : value					{
 											$$->children=$1;
 											$1->next=$3;
 											$$->next=nullptr;
-											useMod();
+											if($1->children->type!=1 && $3->children->type!=1){
+												useMod();
+											}
 										}
 
 condition    : value EQ value			{	
