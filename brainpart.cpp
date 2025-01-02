@@ -12,7 +12,18 @@ int divUses=0;
 int modUses=0;
 
 std::map<std::string,int> procedure_uses;
-std::stack<long long> returnLines;
+std::vector<long long> jumpLines;
+long long rLines = -1;
+
+long long getVPOS(){
+	rLines++;
+	jumpLines.push_back(0);
+	return rLines;
+}
+void setVPOS(long long pos, long long length){
+	jumpLines[pos]=length; //NOTE: maybe +1
+	std::cout<<"#SET "<<pos+1<<" JUMP TO "<<length<<"\n";
+}
 
 namespace vars{
 	class Variable{
@@ -120,6 +131,28 @@ void JNEG(long long i){
 	toProg("JNEG",i);
 }
 
+void uJUMP(long long i){
+	//TEMP
+	JUMP(123456789);
+	//TODO
+}
+void uJZERO(long long i){
+	//TEMP
+	JZERO(123456789);
+	//TODO
+}
+void uJPOS(long long i){
+	//TEMP
+	JPOS(123456789);
+	//TODO
+}
+void uJNEG(long long i){
+	//TEMP
+	JNEG(123456789);
+	//TODO
+}
+
+
 
 void memInc(long long inc = 1){
 	memCounter += inc;
@@ -173,14 +206,6 @@ void declare_tab(Component* declaration){
 	vars::Table tab(name,declaration->children->number_value,declaration->children->next->number_value);
 	tables.emplace(name,tab);
 	memInc((declaration->children->next->number_value)-(declaration->children->number_value)+1);
-}
-void setvar(char* name, char* value){
-	//TEMP
-	std::cout<<name<<" is set to "<<value<<"\n";
-	//TODO
-}
-void settab(char* name, long long pos, char* value){
-	
 }
 long long getMemCell(Component* call){
 	long long outcome=-1;
@@ -284,39 +309,6 @@ void doArithmetic(Component* expr){
 	}
 	//STORE(adr);
 }
-void conditionalize(Component* condition){
-	Component* first = condition->children;
-	Component* second = first->next;
-	Component* fidornum = first->children;
-	Component* sidornum = second->children;
-	switch(condition->type){
-		case 51://==
-			if(first->type==41 && second->type==41){
-				if(sidornum->number_value==fidornum->number_value){
-					//DO
-				} else{
-					//SKIP
-				}
-			}else if (first->type!=1 && second->type==41){
-
-			}else if (first->type==41 && second->type!=41){
-
-			}else{
-
-			}
-		break;
-		case 52://!=
-		break;
-		case 53://>
-		break;
-		case 54://<
-		break;
-		case 55://>=
-		break;
-		case 56://<=
-		break;
-	}
-}
 
 //PROGRAM BUILDING FUNCTIONS
 void useMul(){mulUses++;}
@@ -373,23 +365,563 @@ void declareVariables(Component* declarations){
 	}
 }
 void ifthenelse(Component* comm){
+	//IF(COND)->NOTJUMP
+	//ELSE JUMP at ENDOF1COMMANDS
+	//1COMMANDS
+	//JUMP 2ENDOFCOMMANDS
+	//ENDOF1COMMANDS: 2COMMANDS
+	//ENDOF2COMMANDS:OUTOF_IFTHENELSE
 	Component* condition = comm->children;
 	Component* then = condition->next;
 	Component* elsse = then->next;
+	//BOTH NUMBERS NO JUMPS NEEDED
+	if(condition->children->type == 41 && condition->children->next->type == 41){ 
+		long long val1 = condition->children->children->number_value;
+		long long val2 = condition->children->next->children->number_value;
+		switch(condition->type){
+			case 51:{
+				if(val1==val2){
+					buildCommands(then);
+				}else{
+					buildCommands(elsse);
+				}}
+			break;
+			case 52:{
+				if(val1!=val2){
+					buildCommands(then);
+				}else{
+					buildCommands(elsse);
+				}}
+			break;
+			case 53:{
+				if(val1>val2){
+					buildCommands(then);
+				}else{
+					buildCommands(elsse);
+				}}
+			break;
+			case 54:{
+				if(val1<val2){
+					buildCommands(then);
+				}else{
+					buildCommands(elsse);
+				}}
+			break;
+			case 55:{
+				if(val1>=val2){
+					buildCommands(then);
+				}else{
+					buildCommands(elsse);
+				}}
+			break;
+			case 56:{
+				if(val1<=val2){
+					buildCommands(then);
+				}else{
+					buildCommands(elsse);
+				}}
+			break;
+		}
+	} else if (condition->children->type==41 && condition->children->next->type!=41){
+		switch(condition->type){//NUM COMP ID
+			case 51:{//==
+				SET(condition->children->children->number_value);
+				SUB(getMemCell(condition->children->next->children));
+				JZERO(2);
+				long long j1 = getVPOS();
+				uJUMP(j1);
+				buildCommands(then);
+				long long j2 = getVPOS();
+				uJUMP(j2);
+				setVPOS(j1,helpCounter);
+				buildCommands(elsse);
+				setVPOS(j2,helpCounter);
+				}
+			break;
+			case 52:{//!=
+				SET(condition->children->children->number_value);
+				SUB(getMemCell(condition->children->next->children));
+				long long j1 = getVPOS();
+				uJZERO(j1);
+				buildCommands(then);
+				long long j2 = getVPOS();
+				uJUMP(j2);
+				setVPOS(j1,helpCounter);
+				buildCommands(elsse);
+				setVPOS(j2,helpCounter);
+				}
+			break;
+			case 53:{//>
+				SET(condition->children->children->number_value);
+				SUB(getMemCell(condition->children->next->children));
+				JPOS(2);
+				long long j1 = getVPOS();
+				uJUMP(j1);
+				buildCommands(then);
+				long long j2 = getVPOS();
+				uJUMP(j2);
+				setVPOS(j1,helpCounter);
+				buildCommands(elsse);
+				setVPOS(j2,helpCounter);
+				}
+			break;
+			case 54:{//<
+				SET(condition->children->children->number_value);
+				SUB(getMemCell(condition->children->next->children));
+				JNEG(2);
+				long long j1 = getVPOS();
+				uJPOS(j1);
+				buildCommands(then);
+				long long j2 = getVPOS();
+				uJUMP(j2);
+				setVPOS(j1,helpCounter);
+				buildCommands(elsse);
+				setVPOS(j2,helpCounter);
+				}
+			break;
+			case 55:{//>=
+				SET(condition->children->children->number_value);
+				SUB(getMemCell(condition->children->next->children));
+				JPOS(2);
+				long long j1 = getVPOS();
+				uJNEG(j1);
+				buildCommands(then);
+				long long j2 = getVPOS();
+				uJUMP(j2);
+				setVPOS(j1,helpCounter);
+				buildCommands(elsse);
+				setVPOS(j2,helpCounter);
+				}
+			break;
+			case 56:{//<=
+				SET(condition->children->children->number_value);
+				SUB(getMemCell(condition->children->next->children));
+				JNEG(2);
+				long long j1 = getVPOS();
+				uJPOS(j1);
+				buildCommands(then);
+				long long j2 = getVPOS();
+				uJUMP(j2);
+				setVPOS(j1,helpCounter);
+				buildCommands(elsse);
+				setVPOS(j2,helpCounter);
+				}
+			break;
+		}
+	} else if (condition->children->type!=41 && condition->children->next->type==41){
+		switch(condition->type){//ID COMP NUM
+			case 51:{//==
+				SET(-(condition->children->next->children->number_value));
+				ADD(getMemCell(condition->children->children));
+				JZERO(2);
+				long long j1 = getVPOS();
+				uJUMP(j1);
+				buildCommands(then);
+				long long j2 = getVPOS();
+				uJUMP(j2);
+				setVPOS(j1,helpCounter);
+				buildCommands(elsse);
+				setVPOS(j2,helpCounter);
+				}
+			break;
+			case 52:{//!=
+				SET(-(condition->children->next->children->number_value));
+				ADD(getMemCell(condition->children->children));
+				long long j1 = getVPOS();
+				uJZERO(j1);
+				buildCommands(then);
+				long long j2 = getVPOS();
+				uJUMP(j2);
+				setVPOS(j1,helpCounter);
+				buildCommands(elsse);
+				setVPOS(j2,helpCounter);
+				}
+			break;
+			case 53:{//>
+				SET(-(condition->children->next->children->number_value));
+				ADD(getMemCell(condition->children->children));	//-b+a = a-b
+				JPOS(2);
+				long long j1 = getVPOS();
+				uJUMP(j1);
+				buildCommands(then);
+				long long j2 = getVPOS();
+				uJUMP(j2);
+				setVPOS(j1,helpCounter);
+				buildCommands(elsse);
+				setVPOS(j2,helpCounter);
+				}
+			break;
+			case 54:{//<
+				SET(-(condition->children->next->children->number_value));
+				ADD(getMemCell(condition->children->children));	//-b+a = a-b
+				JNEG(2);
+				long long j1 = getVPOS();
+				uJUMP(j1);
+				buildCommands(then);
+				long long j2 = getVPOS();
+				uJUMP(j2);
+				setVPOS(j1,helpCounter);
+				buildCommands(elsse);
+				setVPOS(j2,helpCounter);
+				}
+			break;
+			case 55:{//>=
+				SET(-(condition->children->next->children->number_value));
+				ADD(getMemCell(condition->children->children));	//-b+a = a-b
+				JPOS(2);
+				long long j1 = getVPOS();
+				uJNEG(j1);
+				buildCommands(then);
+				long long j2 = getVPOS();
+				uJUMP(j2);
+				setVPOS(j1,helpCounter);
+				buildCommands(elsse);
+				setVPOS(j2,helpCounter);
+				}
+			break;
+			case 56:{//<=
+				SET(-(condition->children->next->children->number_value));
+				ADD(getMemCell(condition->children->children));	//-b+a = a-b
+				JNEG(2);
+				long long j1 = getVPOS();
+				uJPOS(j1);
+				buildCommands(then);
+				long long j2 = getVPOS();
+				uJUMP(j2);
+				setVPOS(j1,helpCounter);
+				buildCommands(elsse);
+				setVPOS(j2,helpCounter);
+				}
+			break;
+		}
+	} else {
+		switch(condition->type){//ID COMP ID
+			case 51:{//==
+				LOAD(getMemCell(condition->children->children));
+				SUB(getMemCell(condition->children->next->children));
+				JZERO(2);
+				long long j1 = getVPOS();
+				uJUMP(j1);
+				buildCommands(then);
+				long long j2 = getVPOS();
+				uJUMP(j2);
+				setVPOS(j1,helpCounter);
+				buildCommands(elsse);
+				setVPOS(j2,helpCounter);
+				}
+			break;
+			case 52:{//!=
+				LOAD(getMemCell(condition->children->children));
+				SUB(getMemCell(condition->children->next->children));
+				long long j1 = getVPOS();
+				uJZERO(j1);
+				buildCommands(then);
+				long long j2 = getVPOS();
+				uJUMP(j2);
+				setVPOS(j1,helpCounter);
+				buildCommands(elsse);
+				setVPOS(j2,helpCounter);
+				}
+			break;
+			case 53:{//>
+				LOAD(getMemCell(condition->children->children));
+				SUB(getMemCell(condition->children->next->children));
+				JPOS(2);
+				long long j1 = getVPOS();
+				uJUMP(j1);
+				buildCommands(then);
+				long long j2 = getVPOS();
+				uJUMP(j2);
+				setVPOS(j1,helpCounter);
+				buildCommands(elsse);
+				setVPOS(j2,helpCounter);
+				}
+			break;
+			case 54:{//<
+				LOAD(getMemCell(condition->children->children));
+				SUB(getMemCell(condition->children->next->children));
+				JNEG(2);
+				long long j1 = getVPOS();
+				uJUMP(j1);
+				buildCommands(then);
+				long long j2 = getVPOS();
+				uJUMP(j2);
+				setVPOS(j1,helpCounter);
+				buildCommands(elsse);
+				setVPOS(j2,helpCounter);
+				}
+			break;
+			case 55:{//>=
+				LOAD(getMemCell(condition->children->children));
+				SUB(getMemCell(condition->children->next->children));
+				JPOS(2);
+				long long j1 = getVPOS();
+				uJNEG(j1);
+				buildCommands(then);
+				long long j2 = getVPOS();
+				uJUMP(j2);
+				setVPOS(j1,helpCounter);
+				buildCommands(elsse);
+				setVPOS(j2,helpCounter);
+				}
+			break;
+			case 56:{//<=
+				LOAD(getMemCell(condition->children->children));
+				SUB(getMemCell(condition->children->next->children));
+				JNEG(2);
+				long long j1 = getVPOS();
+				uJPOS(j1);
+				buildCommands(then);
+				long long j2 = getVPOS();
+				uJUMP(j2);
+				setVPOS(j1,helpCounter);
+				buildCommands(elsse);
+				setVPOS(j2,helpCounter);
+				}
+			break;
+		}
+	}
 }
-void ifthenelse(Component* comm){
+void ifthen(Component* comm){
+	//IF(!COND)->JUMP at ENDOFCOMMANDS
+	//COMMANDS
+	//ENDOFCOMMANDS: OUTOF_IFTHEN
 	Component* condition = comm->children;
 	Component* then = condition->next;
+	//BOTH NUMBERS NO JUMPS NEEDED
+	if(condition->children->type == 41 && condition->children->next->type == 41){ 
+		long long val1 = condition->children->children->number_value;
+		long long val2 = condition->children->next->children->number_value;
+		switch(condition->type){
+			case 51:{
+				if(val1==val2){
+					buildCommands(then);
+				}}
+			break;
+			case 52:{
+				if(val1!=val2){
+					buildCommands(then);
+				}}
+			break;
+			case 53:{
+				if(val1>val2){
+					buildCommands(then);
+				}}
+			break;
+			case 54:{
+				if(val1<val2){
+					buildCommands(then);
+				}}
+			break;
+			case 55:{
+				if(val1>=val2){
+					buildCommands(then);
+				}}
+			break;
+			case 56:{
+				if(val1<=val2){
+					buildCommands(then);
+				}}
+			break;
+		}
+	} else if (condition->children->type==41 && condition->children->next->type!=41){
+		switch(condition->type){//NUM COMP ID
+			case 51:{//==
+				SET(condition->children->children->number_value);
+				SUB(getMemCell(condition->children->next->children));
+				JZERO(2);
+				long long j1 = getVPOS();
+				uJUMP(j1);
+				buildCommands(then);
+				setVPOS(j1,helpCounter);
+				}
+			break;
+			case 52:{//!=
+				SET(condition->children->children->number_value);
+				SUB(getMemCell(condition->children->next->children));
+				long long j1 = getVPOS();
+				uJZERO(j1);
+				buildCommands(then);
+				setVPOS(j1,helpCounter);
+				}
+			break;
+			case 53:{//>
+				SET(condition->children->children->number_value);
+				SUB(getMemCell(condition->children->next->children));
+				JPOS(2);
+				long long j1 = getVPOS();
+				uJUMP(j1);
+				buildCommands(then);
+				setVPOS(j1,helpCounter);
+				}
+			break;
+			case 54:{//<
+				SET(condition->children->children->number_value);
+				SUB(getMemCell(condition->children->next->children));
+				JNEG(2);
+				long long j1 = getVPOS();
+				uJPOS(j1);
+				buildCommands(then);
+				setVPOS(j1,helpCounter);
+				}
+			break;
+			case 55:{//>=
+				SET(condition->children->children->number_value);
+				SUB(getMemCell(condition->children->next->children));
+				JPOS(2);
+				long long j1 = getVPOS();
+				uJNEG(j1);
+				buildCommands(then);
+				setVPOS(j1,helpCounter);
+				}
+			break;
+			case 56:{//<=
+				SET(condition->children->children->number_value);
+				SUB(getMemCell(condition->children->next->children));
+				JNEG(2);
+				long long j1 = getVPOS();
+				uJPOS(j1);
+				buildCommands(then);
+				setVPOS(j1,helpCounter);
+				}
+			break;
+		}
+	} else if (condition->children->type!=41 && condition->children->next->type==41){
+		switch(condition->type){//ID COMP NUM
+			case 51:{//==
+				SET(-(condition->children->next->children->number_value));
+				ADD(getMemCell(condition->children->children));
+				JZERO(2);
+				long long j1 = getVPOS();
+				uJUMP(j1);
+				buildCommands(then);
+				setVPOS(j1,helpCounter);
+				}
+			break;
+			case 52:{//!=
+				SET(-(condition->children->next->children->number_value));
+				ADD(getMemCell(condition->children->children));
+				long long j1 = getVPOS();
+				uJZERO(j1);
+				buildCommands(then);
+				setVPOS(j1,helpCounter);
+				}
+			break;
+			case 53:{//>
+				SET(-(condition->children->next->children->number_value));
+				ADD(getMemCell(condition->children->children));	//-b+a = a-b
+				JPOS(2);
+				long long j1 = getVPOS();
+				uJUMP(j1);
+				buildCommands(then);
+				setVPOS(j1,helpCounter);
+				}
+			break;
+			case 54:{//<
+				SET(-(condition->children->next->children->number_value));
+				ADD(getMemCell(condition->children->children));	//-b+a = a-b
+				JNEG(2);
+				long long j1 = getVPOS();
+				uJUMP(j1);
+				buildCommands(then);
+				setVPOS(j1,helpCounter);
+				}
+			break;
+			case 55:{//>=
+				SET(-(condition->children->next->children->number_value));
+				ADD(getMemCell(condition->children->children));	//-b+a = a-b
+				JPOS(2);
+				long long j1 = getVPOS();
+				uJNEG(j1);
+				buildCommands(then);
+				setVPOS(j1,helpCounter);
+				}
+			break;
+			case 56:{//<=
+				SET(-(condition->children->next->children->number_value));
+				ADD(getMemCell(condition->children->children));	//-b+a = a-b
+				JNEG(2);
+				long long j1 = getVPOS();
+				uJPOS(j1);
+				buildCommands(then);
+				setVPOS(j1,helpCounter);
+				}
+			break;
+		}
+	} else {
+		switch(condition->type){//ID COMP ID
+			case 51:{//==
+				LOAD(getMemCell(condition->children->children));
+				SUB(getMemCell(condition->children->next->children));
+				JZERO(2);
+				long long j1 = getVPOS();
+				uJUMP(j1);
+				buildCommands(then);
+				setVPOS(j1,helpCounter);
+				}
+			break;
+			case 52:{//!=
+				LOAD(getMemCell(condition->children->children));
+				SUB(getMemCell(condition->children->next->children));
+				long long j1 = getVPOS();
+				uJZERO(j1);
+				buildCommands(then);
+				setVPOS(j1,helpCounter);
+				}
+			break;
+			case 53:{//>
+				LOAD(getMemCell(condition->children->children));
+				SUB(getMemCell(condition->children->next->children));
+				JPOS(2);
+				long long j1 = getVPOS();
+				uJUMP(j1);
+				buildCommands(then);
+				setVPOS(j1,helpCounter);
+				}
+			break;
+			case 54:{//<
+				LOAD(getMemCell(condition->children->children));
+				SUB(getMemCell(condition->children->next->children));
+				JNEG(2);
+				long long j1 = getVPOS();
+				uJUMP(j1);
+				buildCommands(then);
+				setVPOS(j1,helpCounter);
+				}
+			break;
+			case 55:{//>=
+				LOAD(getMemCell(condition->children->children));
+				SUB(getMemCell(condition->children->next->children));
+				JPOS(2);
+				long long j1 = getVPOS();
+				uJNEG(j1);
+				buildCommands(then);
+				setVPOS(j1,helpCounter);
+				}
+			break;
+			case 56:{//<=
+				LOAD(getMemCell(condition->children->children));
+				SUB(getMemCell(condition->children->next->children));
+				JNEG(2);
+				long long j1 = getVPOS();
+				uJPOS(j1);
+				buildCommands(then);
+				setVPOS(j1,helpCounter);
+				}
+			break;
+		}
+	}
 }
 void buildCommands(Component* commands){
+	long long start = ASSLINE;
 	Component* comm = commands->children;
 	while(comm!=nullptr){
 		//std::cout<<"TYPE: "<<comm->type;
 		switch(comm->type){
-			case 121://TODO:ERROR IF SETTING LOOP VARIABLE
+			case 121:{//TODO:ERROR IF SETTING LOOP VARIABLE
 			long long adr = getMemCell(comm->children);
 			doArithmetic(comm->children->next);
-			STORE(adr);
+			STORE(adr);}
 			break;
 			case 122:{
 				//ifthenelse
@@ -450,4 +982,6 @@ void buildCommands(Component* commands){
 		}
 		comm=comm->next;
 	}
+	helpCounter=ASSLINE-start;
+	std::cout<<"#THIS SUB-PART TOOK "<<helpCounter<<" LINES\n";
 }
