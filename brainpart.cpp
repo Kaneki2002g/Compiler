@@ -22,7 +22,7 @@ long long getVPOS(){
 }
 void setVPOS(long long pos, long long length){
 	jumpLines[pos]=length; //NOTE: maybe +1
-	std::cout<<"#SET "<<pos+1<<" JUMP TO "<<length<<"\n";
+	std::cout<<"\033[F\033[10C#SET "<<pos+1<<" JUMP TO "<<length<<"\n";
 }
 
 namespace vars{
@@ -308,6 +308,70 @@ void doArithmetic(Component* expr){
 		break;
 	}
 	//STORE(adr);
+}
+
+int compareA(Component* cond){ //Does subtraction only if at least one value is not a number
+	//returns:
+	//1 - always True, comparison not made
+	//-1 - never True, comparison not made
+	//0 - make comparison
+	//VALUES
+	Component* first = cond->children;
+	Component* sec = first->next;
+	long long val1,val2;
+	if(first->type==41 && sec->type==41){
+		val1=first->children->number_value;
+		val2=sec->children->number_value;
+		switch(cond->type){
+			case 51://==
+				if(val1==val2)
+					return 1;
+				return -1;
+			break;
+			case 52://!=
+				if(val1!=val2)
+					return 1;
+				return -1;
+			break;
+			case 53://>
+				if(val1>val2)
+					return 1;
+				return -1;
+			break;
+			case 54://<!=>
+				if(val1<val2)
+					return 1;
+				return -1;
+			break;
+			case 55://>=
+				if(val1>=val2)
+					return 1;
+				return -1;
+			break;
+			case 56://<=
+				if(val1<=val2)
+					return 1;
+				return -1;
+			break;
+		}
+	}
+	return 0;
+}
+void compareB(Component* cond){
+	Component* first = cond->children;
+	Component* sec = first->next;
+	if(first->type!=41 && sec->type!=41){
+		LOAD(getMemCell(first->children));
+		SUB(getMemCell(sec->children));
+	} else{
+		if(first->type==41){
+			SET(first->children->number_value);
+			SUB(getMemCell(sec->children));
+		}else{
+			SET(-(sec->children->number_value));
+			ADD(getMemCell(first->children));
+		}
+	}
 }
 
 //PROGRAM BUILDING FUNCTIONS
@@ -912,6 +976,42 @@ void ifthen(Component* comm){
 		}
 	}
 }
+void repeatUntil(Component* comm){
+	Component* doings = comm->children;
+	Component* cond = doings->next;
+	int help=compareA(cond);
+	if(help==0){//non defined loop
+		buildCommands(doings);
+		compareB(cond);
+		switch(cond->type){
+			case 51://==
+			JZERO(2);
+			JUMP(-(helpCounter+3));
+			break;
+			case 52://!=
+			JZERO(-(helpCounter+2));
+			break;
+			case 53://>
+			JPOS(2);
+			JUMP(-(helpCounter+3));
+			break;
+			case 54://<
+			JNEG(2);
+			JUMP(-(helpCounter+3));
+			break;
+			case 55://>=
+			JNEG(-(helpCounter+2));
+			break;
+			case 56://<=
+			JPOS(-(helpCounter+2));
+			break;
+		}
+	} else if(help==1){//infinite loop
+		buildCommands(doings);
+		JUMP(-helpCounter);
+	}
+	//otherwise skip;
+}
 void buildCommands(Component* commands){
 	long long start = ASSLINE;
 	Component* comm = commands->children;
@@ -933,15 +1033,26 @@ void buildCommands(Component* commands){
 				ifthen(comm);
 			}
 			break;
-			case 124:
-			//TODO
-			std::cout<<"whiledo"<<std::endl;
-			//while...do
-			break;
-			case 125:
-			//TODO
-			std::cout<<"repeatunitl"<<std::endl;
-			//repeatuntil
+			case 124:{
+				//NOTE: NOT TESTED PROPERLY
+				//TODO: IF ALWAYS TRUE INFINITE LOOP, ELSE SKIP
+				//std::cout<<"whiledo"<<std::endl;
+				Component* fakeifthen = new Component();
+				long long cheatNumber = rLines+1;
+				fakeifthen->children=comm->children;
+				ifthen(fakeifthen);
+				jumpLines[cheatNumber]++;
+				//std::cout<<"\033[F\033[10C#JUMP "<<cheatNumber+1<<" WILL BE BIGGER BY 1\n";
+				JUMP(-helpCounter);
+				//while...do
+				break;
+				}
+			case 125:{
+				//TODO
+				//std::cout<<"repeatunitl"<<std::endl;
+				//repeatuntil
+				repeatUntil(comm);
+			}
 			break;
 			case 126:
 			//TODO
@@ -983,5 +1094,5 @@ void buildCommands(Component* commands){
 		comm=comm->next;
 	}
 	helpCounter=ASSLINE-start;
-	std::cout<<"#THIS SUB-PART TOOK "<<helpCounter<<" LINES\n";
+	//std::cout<<"#THIS SUB-PART TOOK "<<helpCounter<<" LINES\n";
 }
