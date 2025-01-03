@@ -34,14 +34,21 @@ namespace vars{
 			int timesUsed(){return used;}
 			std::string getName(){return name;}
 			unsigned long long int getPos(){return memory_cell;}
+			bool isLVar(){return loopvar;}
+			void makeLVar(){loopvar=true;}
+			bool isnUsed(){return usednow;}
+			void usen(){usednow=true;}
+			void unuse(){usednow=false;}
 		private:
 			std::string name;
 			int used;
 			bool sett;
 			unsigned long long int memory_cell;
-			
+			bool loopvar;
+			bool usednow;
 		public:
-			Variable(const std::string& name) : name(name), used(0), sett(false), memory_cell(memCounter) {}
+			Variable(const std::string& name) : name(name), used(0), sett(false), memory_cell(memCounter), loopvar(false), usednow(false) {}
+			Variable(){}
 	};
 	
 	class Table{
@@ -61,6 +68,7 @@ namespace vars{
 			unsigned long long int memory_cell;
 		public:
 			Table(const std::string& name, long long a, long long b) : name(name), sett(b-a+1,false), first(a), last(b), used(0), memory_cell(memCounter) {}
+			Table();
 	};
 	
 	class Procedure{
@@ -207,6 +215,34 @@ void declare_tab(Component* declaration){
 	tables.emplace(name,tab);
 	memInc((declaration->children->next->number_value)-(declaration->children->number_value)+1);
 }
+
+
+vars::Variable decloop_var(Component* pid){
+	std::string name(pid->pid_name);
+	try{
+			vars::Variable var = variables.at(name);
+			if(var.isLVar() && !(var.isnUsed())){
+				var.usen();
+				return var;
+			} else{
+				//TODO
+				//THROW USED ALREADY ERROR
+			}
+		}catch(const std::out_of_range& e){
+			try{
+				vars::Table var = tables.at(name);
+				//TODO
+				//THROW ERROR ALREADY USED
+			}catch(const std::out_of_range& e){
+				vars::Variable var(name);
+				var.makeLVar();
+				var.usen();
+				memInc();
+				return var;
+			}
+		}
+}
+
 long long getMemCell(Component* call){
 	long long outcome=-1;
 	if(call->type==31){//normal variable
@@ -310,7 +346,7 @@ void doArithmetic(Component* expr){
 	//STORE(adr);
 }
 
-int compareA(Component* cond){ //Does subtraction only if at least one value is not a number
+int compareA(Component* cond){
 	//returns:
 	//1 - always True, comparison not made
 	//-1 - never True, comparison not made
@@ -1014,6 +1050,47 @@ void repeatUntil(Component* comm){
 	}
 	//otherwise skip;
 }
+void makefor(Component* loop){
+	Component* pid = loop->children;
+	Component* start = pid->next;
+	Component* finish = start->next;
+	Component* comms = finish->next;
+	vars::Variable iterator = decloop_var(pid);
+	long long dest=-1;
+	if(loop->type==126){
+		loadORset(start);
+		STORE(iterator.getPos());
+		loadORset(finish);
+		STORE(memCounter);
+		dest = memCounter;
+		memInc();
+	} else if(loop->type==127){
+		loadORset(finish);
+		STORE(iterator.getPos());
+		loadORset(start);
+		STORE(memCounter);
+		dest = memCounter;
+		memInc();
+	} //4 LINES
+	LOAD(iterator.getPos());
+	SUB(dest);
+	long long j1 = getVPOS();
+	uJNEG(j1);
+	buildCommands(comms);
+	JUMP(-(helpCounter+2));
+	iterator.unuse();
+	// Component* fakeCond = new Component();
+	// fakeCond->children = loop->children->next;
+	// fakeCond->type = 51;
+	// int compareEQ = compareA(fakeCond);
+	// fakeCond->type = 53;
+	// int compareGT = compareA(fakeCond);
+	// if(compareEQ!=0){
+	// 	if(loop->type==126){
+			
+	// 	}
+	// }
+}
 void buildCommands(Component* commands){
 	long long start = ASSLINE;
 	Component* comm = commands->children;
@@ -1063,12 +1140,14 @@ void buildCommands(Component* commands){
 			//SHOULD MAKE LOCAL VARIABLE STACK/TABLE
 			//OR CHECK FIELD IN VARIABLE (EG. currentlyUsed=true;)
 			//IN PROCEDURES FOR LOOPS SHOULD HAVE ITERATOR AS SEPARATE REGISTER SAVED
+			makefor(comm);
 			break;
 			case 127:
 			//TODO
 			std::cout<<"forfromdowntodo"<<std::endl;
 			//for...from...downto...do...
 			//--||--
+			makefor(comm);
 			break;
 			case 128:
 			//TODO
