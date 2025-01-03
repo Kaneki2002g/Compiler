@@ -429,6 +429,7 @@ void declareVariables(Component* declarations){
 	}
 }
 void ifthenelse(Component* comm){
+	//NOTE:MAY SHORTEN IF USED compareA() and compareB() methods, but now I'm too tired to do this 
 	//IF(COND)->NOTJUMP
 	//ELSE JUMP at ENDOF1COMMANDS
 	//1COMMANDS
@@ -747,6 +748,7 @@ void ifthenelse(Component* comm){
 	}
 }
 void ifthen(Component* comm){
+	//NOTE:MAY SHORTEN IF USED compareA() and compareB() methods, but now I'm too tired to do this 
 	//IF(!COND)->JUMP at ENDOFCOMMANDS
 	//COMMANDS
 	//ENDOFCOMMANDS: OUTOF_IFTHEN
@@ -1056,17 +1058,24 @@ void buildCommands(Component* commands){
 			break;
 			case 126:
 			//TODO
-			std::cout<<"forfromtodo"<<std::endl;
+			//std::cout<<"forfromtodo"<<std::endl;
 			//for...from...to...do...
+			//SHOULD MAKE LOCAL VARIABLE STACK/TABLE
+			//OR CHECK FIELD IN VARIABLE (EG. currentlyUsed=true;)
+			//IN PROCEDURES FOR LOOPS SHOULD HAVE ITERATOR AS SEPARATE REGISTER SAVED
 			break;
 			case 127:
 			//TODO
 			std::cout<<"forfromdowntodo"<<std::endl;
 			//for...from...downto...do...
+			//--||--
 			break;
 			case 128:
 			//TODO
 			//proc_call
+			//SET REGISTERS
+			//JUMP TO PROCEDURE
+			//RETURN WITH RTRN
 			break;
 			case 129:
 				{
