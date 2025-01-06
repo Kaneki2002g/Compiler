@@ -513,7 +513,7 @@ expression   : value					{
 											$$->next=nullptr;
 											if($1->children->type==1 && $3->children->type==1){
 												//dont use div just place a number here
-											} else if ($3->children->number_value%2==0){
+											} else if ($3->children->number_value==2){
 												//use half
 											} else {
 												useDiv();

@@ -1186,17 +1186,16 @@ void makefor(Component* loop){
 	if(loop->type==126){//growing
 		LOAD(dest);
 		SUB(iterator.getPos());
-		uJNEG(j1);
 	} else{//smolling
 		LOAD(iterator.getPos());
 		SUB(dest);
-		uJNEG(j1);
 	}
+	uJNEG(j1);
 	buildCommands(comms);
 	LOAD(iterator.getPos());
 	SUB(getonereg());
 	JUMP(-(helpCounter+5));
-	setVPOS(j1,helpCounter+6);
+	setVPOS(j1,helpCounter+4);
 	iterator.unuse();
 }
 void buildCommands(Component* commands){
@@ -1252,7 +1251,7 @@ void buildCommands(Component* commands){
 			break;
 			case 127:
 			//TODO
-			std::cout<<"forfromdowntodo"<<std::endl;
+			//std::cout<<"forfromdowntodo"<<std::endl;
 			//for...from...downto...do...
 			//--||--
 			makefor(comm);
