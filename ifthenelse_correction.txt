@@ -1,0 +1,123 @@
+void ifthenelse(Component* comm){ //ifthen(else)
+	//NOTE:MAY SHORTEN IF USED compareA() and compareB() methods, but now I'm too tired to do this 
+	//IF(COND)->NOTJUMP
+	//ELSE JUMP at ENDOF1COMMANDS
+	//1COMMANDS
+	//JUMP 2ENDOFCOMMANDS
+	//ENDOF1COMMANDS: 2COMMANDS
+	//ENDOF2COMMANDS:OUTOF_IFTHENELSE
+	Component* condition = comm->children;
+	Component* then = condition->next;
+	Component* elsse = then->next;
+	//BOTH NUMBERS NO JUMPS NEEDED
+	int help = compareA(condition->children, condition->children->next);
+	if(help==1){
+	buildCommands(then);
+	}else if(help==-1){
+	buildCommands(else);
+	}else{
+		switch(condition->type){//NUM COMP ID
+			case 51:{//==
+				compareB(condition->children, condition->children->next);
+				JZERO(2);
+				unsigned long long j1 = getVPOS();
+				uJUMP(j1);
+				buildCommands(then);
+				if(elsse!=nullptr){
+				unsigned long long j2 = getVPOS();
+				uJUMP(j2);
+				}
+				setVPOS(j1,helpCounter);
+				if(elsse!=nullptr){
+					buildCommands(elsse);
+					setVPOS(j2,helpCounter);
+					}
+				}
+			break;
+			case 52:{//!=
+				compareB(condition->children, condition->children->next);
+				long long j1 = getVPOS();
+				uJZERO(j1);
+				buildCommands(then);
+				if(elsse!=nullptr){
+				long long j2 = getVPOS();
+				uJUMP(j2);
+				}
+				setVPOS(j1,helpCounter);
+				if(elsse!=nullptr){
+					buildCommands(elsse);
+					setVPOS(j2,helpCounter);
+					}
+				}
+			break;
+			case 53:{//>
+				compareB(condition->children, condition->children->next);
+				JPOS(2);
+				long long j1 = getVPOS();
+				uJUMP(j1);
+				buildCommands(then);
+				if(elsse!=nullptr){
+				long long j2 = getVPOS();
+				uJUMP(j2);
+				}
+				setVPOS(j1,helpCounter);
+				if(elsse!=nullptr){
+					buildCommands(elsse);
+					setVPOS(j2,helpCounter);
+					}
+				}
+			break;
+			case 54:{//<
+				compareB(condition->children, condition->children->next);
+				JNEG(2);
+				long long j1 = getVPOS();
+				uJPOS(j1);
+				buildCommands(then);
+				if(elsse!=nullptr){
+				long long j2 = getVPOS();
+				uJUMP(j2);
+				}
+				setVPOS(j1,helpCounter);
+				if(elsse!=nullptr){
+					buildCommands(elsse);
+					setVPOS(j2,helpCounter);
+					}
+				}
+			break;
+			case 55:{//>=
+				compareB(condition->children, condition->children->next);
+				JPOS(2);
+				long long j1 = getVPOS();
+				uJNEG(j1);
+				buildCommands(then);
+				if(elsse!=nullptr){
+				long long j2 = getVPOS();
+				uJUMP(j2);
+				}
+				setVPOS(j1,helpCounter);
+				if(elsse!=nullptr){
+					buildCommands(elsse);
+					setVPOS(j2,helpCounter);
+					}
+				}
+			break;
+			case 56:{//<=
+				compareB(condition->children, condition->children->next);
+				JNEG(2);
+				long long j1 = getVPOS();
+				uJPOS(j1);
+				buildCommands(then);
+				if(elsse!=nullptr){
+				long long j2 = getVPOS();
+				uJUMP(j2);
+				}
+				setVPOS(j1,helpCounter);
+				if(elsse!=nullptr){
+					buildCommands(elsse);
+					setVPOS(j2,helpCounter);
+					}
+				}
+			break;
+		}
+	}
+}
