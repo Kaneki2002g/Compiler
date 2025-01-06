@@ -1,13 +1,18 @@
 #include "brainpart.hpp"
 
+//TODO: Change long long to unsigned long longs if needed
+
 long long memCounter = 1;
 long long ASSLINE = 0;
 long long posCounter = 0;
 long long helpCounter = 0;
 
+unsigned long long mainLine;
+
 int mulUses=0;
 int divUses=0;
 int modUses=0;
+int forUses=0;
 
 std::map<std::string,int> procedure_uses;
 std::vector<long long> jumpLines;
@@ -88,71 +93,75 @@ void toProg(std::string comm, long long i){
 	ASSLINE++;
 }
 
-void GET(long long i){
+void GET(unsigned long long i){
 	toProg("GET",i);
 }
-void PUT(long long i){
+void PUT(unsigned long long i){
 	toProg("PUT",i);
 }
-void LOAD(long long i){
+void LOAD(unsigned long long i){
 	toProg("LOAD",i);
 }
-void STORE(long long i){
+void STORE(unsigned long long i){
 	toProg("STORE",i);
 }
-void LOADI(long long i){
+void LOADI(unsigned long long i){
 	toProg("LOADI",i);
 }
-void STOREI(long long i){
+void STOREI(unsigned long long i){
 	toProg("STOREI",i);
 }
-void ADD(long long i){
+void ADD(unsigned long long i){
 	toProg("ADD",i);
 }
-void SUB(long long i){
+void SUB(unsigned long long i){
 	toProg("SUB",i);
 }
-void ADDI(long long i){
+void ADDI(unsigned long long i){
 	toProg("ADDI",i);
 }
-void SUBI(long long i){
+void SUBI(unsigned long long i){
 	toProg("SUBI",i);
 }
 void SET(long long i){
+	//TODO: "SET -", abs(i)
 	toProg("SET",i);
 }
-void HALF(long long i){
+void HALF(unsigned long long i){
 	toProg("HALF",i);
 }
-void JUMP(long long i){
+void JUMP(unsigned long long i){
 	toProg("JUMP",i);
 }
-void JPOS(long long i){
+void JPOS(unsigned long long i){
 	toProg("JPOS",i);
 }
-void JZERO(long long i){
+void JZERO(unsigned long long i){
 	toProg("JZERO",i);
 }
-void JNEG(long long i){
+void JNEG(unsigned long long i){
 	toProg("JNEG",i);
 }
+void RTRN(unsigned long long i){
+	toProg("RTRN", i);
+}
 
-void uJUMP(long long i){
+void uJUMP(unsigned long long i){
 	//TEMP
 	JUMP(123456789);
 	//TODO
 }
-void uJZERO(long long i){
+void uJZERO(unsigned long long i){
 	//TEMP
 	JZERO(123456789);
 	//TODO
 }
-void uJPOS(long long i){
+void uJPOS(unsigned long long i){
 	//TEMP
 	JPOS(123456789);
 	//TODO
 }
-void uJNEG(long long i){
+void uJNEG(unsigned long long i){
 	//TEMP
 	JNEG(123456789);
 	//TODO
@@ -160,22 +169,23 @@ void uJNEG(long long i){
 
 
 
-void memInc(long long inc = 1){
+void memInc(unsigned long long inc = 1){
 	memCounter += inc;
 }
 
 /*
-REGISTERS(OPTIONAL):
-1 - typical for return if function doesn't use different function
-2 - for A in arithmetic operations
-3 - for B in arithmetic operations
-4(if 2 and 3 are used, eventually different) - for storing outcome in arithmetic operations
+REGISTERS:
+ret - for returns
+a - for arithmetic
+b - for arithmetic
+o - for arithmetic
+one - for 1 in for loops
 */
 
 bool rtrnset = false;
 unsigned long long rtrnReg = 0;
 
-unsigned long long getretreg{
+unsigned long long getretreg(){
 	if (!rtrnset){
 		rtrnReg = memCounter;
 		memInc();
@@ -187,7 +197,7 @@ bool abset = false;
 unsigned long long areg = 0;
 unsigned long long breg = 0;
 
-unsigned long long getareg{
+unsigned long long getareg(){
 	if (!abset){
 		areg = memCounter;
 		memInc();
@@ -197,7 +207,7 @@ unsigned long long getareg{
 	return areg;
 }
 
-unsigned long long getbreg{
+unsigned long long getbreg(){
 	if (!abset){
 		areg = memCounter;
 		memInc();
@@ -210,12 +220,23 @@ unsigned long long getbreg{
 bool oset = false;
 unsigned long long oreg = 0;
 
-unsigned long long getoreg{
+unsigned long long getoreg(){
 	if (!oset){
 		oreg = memCounter;
 		memInc();
 	}
 	return oreg;
+}
+
+bool oneset = false;
+unsigned long long onereg = 0;
+
+unsigned long long getonereg(){
+	if (!oset){
+		onereg = memCounter;
+		memInc();
+	}
+	return onereg;
 }
 
 //
@@ -228,13 +249,12 @@ Component* lastnext(Component* comp){
 		return tot;
 }
 
-void addMUL(long long reg_A, long long reg_B, long long reg_O, long long reg_R){
-	/*
+void addMUL(unsigned long long reg_A, unsigned long long reg_B, unsigned long long reg_O, unsigned long long reg_R){
 	SET(0);
 	STORE(reg_O);
 	LOAD(reg_B);
-	JZERO(18)
-	HALF();
+	JZERO(18);
+	HALF(0);
 	JZERO(14);
 	ADD(0);
 	SUB(reg_B);
@@ -243,17 +263,41 @@ void addMUL(long long reg_A, long long reg_B, long long reg_O, long long reg_R){
 	ADD(reg_A);
 	STORE(reg_O);
 	LOAD(reg_B);
-	HALF;
+	HALF(0);
 	STORE(reg_B);
 	LOAD(reg_A);
 	ADD(0);
 	STORE(reg_A);
 	JUMP(-16);
-	LOAD(W);
-	ADD(A);
+	LOAD(reg_O);
+	ADD(reg_A);
 	RTRN(reg_R);
+	/*SET 0
+	STORE 4
+	LOAD 3
+	JZERO 18
+	HALF
+	JZERO 14
+	ADD 0
+	SUB 3
+	JZERO 4
+	LOAD 4
+	ADD 2
+	STORE 4
+	LOAD 3
+	HALF
+	STORE 3
+	LOAD 2
+	ADD 0
+	STORE 2
+	JUMP -16
+	LOAD 4
+	ADD 2
+	RTRN 1 
 	*/
 }
+void addDIV(){}
+void addMOD(){}
 
 
 //VARIABLE MANIPULATION FUNCTIONS
@@ -297,8 +341,8 @@ vars::Variable decloop_var(Component* pid){
 		}
 }
 
-long long getMemCell(Component* call){
-	long long outcome=-1;
+unsigned long long getMemCell(Component* call){
+	unsigned long long outcome=0;
 	if(call->type==31){//normal variable
 		std::string name(call->children->pid_name);
 		try{
@@ -468,16 +512,21 @@ void compareB(Component* cond){
 void useMul(){mulUses++;}
 void useDiv(){divUses++;}
 void useMod(){modUses++;}
+void useFor(){forUses++;}
 
 void buildProgram(Component* all){
 	if(mulUses>0){
-
+		auto r = getretreg();
+		auto a = getareg();
+		auto b = getbreg();
+		auto o = getoreg();
+		addMUL(a,b,o,r);
 	}
 	if(divUses>0){
-
+		addDIV();
 	}
 	if(modUses>0){
-		
+		addMOD();
 	}
 	Component* a = all->children; //a = {[procedures], main}
 	buildProcedures(a);
@@ -497,6 +546,11 @@ void makeProcedure(Component* procedure){
 	}
 }
 void buildProcedures(Component* procedures){
+	if(forUses>0){
+		auto one = getonereg();
+		SET(1);
+		STORE(one);
+	}
 	Component* procedure = procedures->children;
 	while(procedure!=nullptr){
 		//TODO:Procedure translation
@@ -507,6 +561,7 @@ void buildProcedures(Component* procedures){
 
 //MAIN MAKING
 void buildMain(Component* main){
+	mainLine = ASSLINE;
 	if(main->type==141){
 		declareVariables(main->children);
 	}
@@ -592,10 +647,10 @@ void ifthenelse(Component* comm){
 				SET(condition->children->children->number_value);
 				SUB(getMemCell(condition->children->next->children));
 				JZERO(2);
-				long long j1 = getVPOS();
+				unsigned long long j1 = getVPOS();
 				uJUMP(j1);
 				buildCommands(then);
-				long long j2 = getVPOS();
+				unsigned long long j2 = getVPOS();
 				uJUMP(j2);
 				setVPOS(j1,helpCounter);
 				buildCommands(elsse);
@@ -1120,39 +1175,29 @@ void makefor(Component* loop){
 	Component* comms = finish->next;
 	vars::Variable iterator = decloop_var(pid);
 	long long dest=-1;
-	if(loop->type==126){
-		loadORset(start);
-		STORE(iterator.getPos());
-		loadORset(finish);
-		STORE(memCounter);
-		dest = memCounter;
-		memInc();
-	} else if(loop->type==127){
-		loadORset(finish);
-		STORE(iterator.getPos());
-		loadORset(start);
-		STORE(memCounter);
-		dest = memCounter;
-		memInc();
-	} //4 LINES
-	LOAD(iterator.getPos());
-	SUB(dest);
-	long long j1 = getVPOS();
-	uJNEG(j1);
+	loadORset(start);
+	STORE(iterator.getPos());
+	loadORset(finish);
+	STORE(memCounter);
+	dest = memCounter;
+	memInc();
+	//4LINES
+	long long j1 = getVPOS();;
+	if(loop->type==126){//growing
+		LOAD(dest);
+		SUB(iterator.getPos());
+		uJNEG(j1);
+	} else{//smolling
+		LOAD(iterator.getPos());
+		SUB(dest);
+		uJNEG(j1);
+	}
 	buildCommands(comms);
-	JUMP(-(helpCounter+2));
+	LOAD(iterator.getPos());
+	SUB(getonereg());
+	JUMP(-(helpCounter+5));
+	setVPOS(j1,helpCounter+6);
 	iterator.unuse();
-	// Component* fakeCond = new Component();
-	// fakeCond->children = loop->children->next;
-	// fakeCond->type = 51;
-	// int compareEQ = compareA(fakeCond);
-	// fakeCond->type = 53;
-	// int compareGT = compareA(fakeCond);
-	// if(compareEQ!=0){
-	// 	if(loop->type==126){
-			
-	// 	}
-	// }
 }
 void buildCommands(Component* commands){
 	long long start = ASSLINE;

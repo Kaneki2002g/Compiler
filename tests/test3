@@ -1,0 +1,11 @@
+PROGRAM IS
+    n,k
+BEGIN
+    READ n;
+    READ k;
+    FOR i FROM 5 DOWNTO 1 DO
+    n:=n+1;
+    WRITE n;
+    ENDFOR
+    WRITE k;
+END

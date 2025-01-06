@@ -18,6 +18,7 @@ void write(char* var);
 void useMul();
 void useDiv();
 void useMod();
+void useFor();
 
 void buildProgram(Component* all);
 void buildProcedures(Component* procedures);

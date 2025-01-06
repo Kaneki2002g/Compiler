@@ -1,0 +1,10 @@
+PROGRAM IS
+    n,k
+BEGIN
+    READ n;
+    READ k;
+    REPEAT
+       n:=n+1;
+    UNTIL n=k;
+    WRITE n;
+END

@@ -214,6 +214,7 @@ command      : identifier SET expression SEMICOLON							{
 																				$4->next=$6;
 																				$6->next=$8;
 																				$$->next=nullptr;
+																				useFor();
 																			}
              | FOR pidentifier FROM value DOWNTO value DO commands ENDFOR	{		
 																				Component* pid = new Component();
@@ -234,6 +235,7 @@ command      : identifier SET expression SEMICOLON							{
 																				$4->next=$6;
 																				$6->next=$8;
 																				$$->next=nullptr;
+																				useFor();
 																			}
              | proc_call SEMICOLON											{	
 																				$$ = new Component();
@@ -513,9 +515,6 @@ expression   : value					{
 												//dont use div just place a number here
 											} else if ($3->children->number_value%2==0){
 												//use half
-												if($3->children->number_value%>1024){
-													useDiv();
-												}
 											} else {
 												useDiv();
 											}
