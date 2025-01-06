@@ -487,6 +487,17 @@ expression   : value					{
 											$$->next=nullptr;
 											if($1->children->type!=1 && $3->children->type!=1){
 												useMul();
+											} else{
+												if($1->children->type==1){
+													if($1->children->number_value>10){
+														useMul();
+													}
+												}
+												if($3->children->type==1){
+													if($3->children->number_value>10){
+														useMul();
+													}
+												}
 											}
 										}
              | value DIV value			{	
@@ -498,7 +509,14 @@ expression   : value					{
 											$$->children=$1;
 											$1->next=$3;
 											$$->next=nullptr;
-											if($1->children->type!=1 && $3->children->type!=1){
+											if($1->children->type==1 && $3->children->type==1){
+												//dont use div just place a number here
+											} else if ($3->children->number_value%2==0){
+												//use half
+												if($3->children->number_value%>1024){
+													useDiv();
+												}
+											} else {
 												useDiv();
 											}
 										}
@@ -511,7 +529,12 @@ expression   : value					{
 											$$->children=$1;
 											$1->next=$3;
 											$$->next=nullptr;
-											if($1->children->type!=1 && $3->children->type!=1){
+											if($1->children->type==1 && $3->children->type==1){
+												//dont use div just place a number here
+											} else if ($3->children->number_value==2){
+												//use half
+												//and sub
+											} else {
 												useMod();
 											}
 										}

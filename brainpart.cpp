@@ -1,6 +1,4 @@
 #include "brainpart.hpp"
-//#include <map>
-//#include <vector> to w brainpart.hpp
 
 long long memCounter = 1;
 long long ASSLINE = 0;
@@ -165,6 +163,62 @@ void uJNEG(long long i){
 void memInc(long long inc = 1){
 	memCounter += inc;
 }
+
+/*
+REGISTERS(OPTIONAL):
+1 - typical for return if function doesn't use different function
+2 - for A in arithmetic operations
+3 - for B in arithmetic operations
+4(if 2 and 3 are used, eventually different) - for storing outcome in arithmetic operations
+*/
+
+bool rtrnset = false;
+unsigned long long rtrnReg = 0;
+
+unsigned long long getretreg{
+	if (!rtrnset){
+		rtrnReg = memCounter;
+		memInc();
+	}
+	return rtrnReg;
+}
+
+bool abset = false;
+unsigned long long areg = 0;
+unsigned long long breg = 0;
+
+unsigned long long getareg{
+	if (!abset){
+		areg = memCounter;
+		memInc();
+		breg = memCounter;
+		memInc();
+	}
+	return areg;
+}
+
+unsigned long long getbreg{
+	if (!abset){
+		areg = memCounter;
+		memInc();
+		breg = memCounter;
+		memInc();
+	}
+	return breg;
+}
+
+bool oset = false;
+unsigned long long oreg = 0;
+
+unsigned long long getoreg{
+	if (!oset){
+		oreg = memCounter;
+		memInc();
+	}
+	return oreg;
+}
+
+//
 
 Component* lastnext(Component* comp){
 		Component* tot = comp;
@@ -416,6 +470,15 @@ void useDiv(){divUses++;}
 void useMod(){modUses++;}
 
 void buildProgram(Component* all){
+	if(mulUses>0){
+
+	}
+	if(divUses>0){
+
+	}
+	if(modUses>0){
+		
+	}
 	Component* a = all->children; //a = {[procedures], main}
 	buildProcedures(a);
 	buildMain(a->next);
