@@ -189,6 +189,7 @@ unsigned long long getretreg(){
 	if (!rtrnset){
 		rtrnReg = memCounter;
 		memInc();
+		rtrnset=true;
 	}
 	return rtrnReg;
 }
@@ -203,6 +204,7 @@ unsigned long long getareg(){
 		memInc();
 		breg = memCounter;
 		memInc();
+		abset=true;
 	}
 	return areg;
 }
@@ -224,6 +226,7 @@ unsigned long long getoreg(){
 	if (!oset){
 		oreg = memCounter;
 		memInc();
+		oset=true;
 	}
 	return oreg;
 }
@@ -232,9 +235,10 @@ bool oneset = false;
 unsigned long long onereg = 0;
 
 unsigned long long getonereg(){
-	if (!oset){
+	if (!oneset){
 		onereg = memCounter;
 		memInc();
+		oneset=true;
 	}
 	return onereg;
 }
@@ -1193,9 +1197,14 @@ void makefor(Component* loop){
 	uJNEG(j1);
 	buildCommands(comms);
 	LOAD(iterator.getPos());
-	SUB(getonereg());
-	JUMP(-(helpCounter+5));
-	setVPOS(j1,helpCounter+4);
+	if(loop->type==126){
+		ADD(getonereg());
+	} else {
+		SUB(getonereg());
+	}
+	STORE(iterator.getPos());
+	JUMP(-(helpCounter+6));
+	setVPOS(j1,helpCounter+5);
 	iterator.unuse();
 }
 void buildCommands(Component* commands){
