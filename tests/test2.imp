@@ -1,0 +1,11 @@
+PROGRAM IS
+    n
+BEGIN
+    READ n;
+    IF n=2 THEN
+        WRITE 1;
+    ELSE
+        WRITE 0;
+    ENDIF
+WRITE 1000;
+END
