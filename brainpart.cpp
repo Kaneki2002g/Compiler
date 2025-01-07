@@ -1,5 +1,7 @@
 #include "brainpart.hpp"
 
+bool buildingProcedures = false; //flag for building procedures
+
 //TODO: Change long long to unsigned long longs if needed
 
 long long memCounter = 1;
@@ -42,6 +44,10 @@ namespace vars{
 			bool isnUsed(){return usednow;}
 			void usen(){usednow=true;}
 			void unuse(){usednow=false;}
+			void setPointer(){pointer = true;}
+			bool isPointer(){return pointer;}
+			bool isTablePointer(){return tablePointer;}
+			void setTablePointer(){tablePointer=true;}
 		private:
 			std::string name;
 			int used;
@@ -49,8 +55,10 @@ namespace vars{
 			unsigned long long int memory_cell;
 			bool loopvar;
 			bool usednow;
+			bool pointer;
+			bool tablePointer;
 		public:
-			Variable(const std::string& name) : name(name), used(0), sett(false), memory_cell(memCounter), loopvar(false), usednow(false) {}
+			Variable(const std::string& name) : name(name), used(0), sett(false), memory_cell(memCounter), loopvar(false), usednow(false), pointer(false),tablePointer(false) {}
 			Variable(){}
 	};
 	
@@ -76,12 +84,22 @@ namespace vars{
 	
 	class Procedure{
 		public:
-			Procedure(const std::string& name){
-				
-			}
+			Procedure(const std::string& name): name(name){}
+			Procedure(){}
+			void add_local_variable(Variable var, std::string vname){localVariables.emplace(vname,var);}
+			void add_local_table(Table tab, std::string tname){localTables.emplace(tname,tab);}
+			void add_given_variable(Variable var, std::string vname){givenVariables.emplace(vname,var);}
+			void add_given_table(Variable tab, std::string tname){givenTables.emplace(tname,tab);}
 		private:
+			std::string name;
+			std::map<std::string, Variable> localVariables;
+			std::map<std::string, Table> localTables;
+			std::map<std::string, Variable> givenVariables;
+			std::map<std::string, Variable> givenTables; //Tables are given as variables! (blackboxes)
 	};
 };
+
+vars::Procedure currentProcedure;
 
 std::map<std::string, vars::Variable> variables;
 std::map<std::string, vars::Table> tables;
@@ -318,6 +336,31 @@ void declare_tab(Component* declaration){
 	memInc((declaration->children->next->number_value)-(declaration->children->number_value)+1);
 }
 
+vars::Variable decl_vartab(Component* declaration){ //Pointers
+	std::string name(declaration->pid_name);
+	vars::Variable var(name);//TODO:ERROR IF NAME IN DIFFERENT VARS IN PROCEDURE
+	var.setPointer();
+	if(declaration->type==2){
+		var.setTablePointer();
+	}
+	memInc();
+	return var;
+}
+
+vars::Variable declare_proc_var(Component* declaration){
+	std::string name(declaration->pid_name);
+	vars::Variable var(name);//TODO:ERROR IF NAME IN DIFFERENT VARS IN PROCEDURE
+	memInc();
+	return var;
+}
+
+vars::Table declare_proc_tab(Component* declaration){
+	std::string name(declaration->pid_name);
+	vars::Table tab(name,declaration->children->number_value,declaration->children->next->number_value);//TODO:ERROR IF NAME IN DIFFERENT VARS IN PROCEDURE
+	memInc((declaration->children->next->number_value)-(declaration->children->number_value)+1);
+	return tab;
+}
+
 
 vars::Variable decloop_var(Component* pid){
 	std::string name(pid->pid_name);
@@ -524,6 +567,7 @@ void buildProgram(Component* all){
 		auto a = getareg();
 		auto b = getbreg();
 		auto o = getoreg();
+		//mulPos = ASSLINE;
 		addMUL(a,b,o,r);
 	}
 	if(divUses>0){
@@ -533,21 +577,40 @@ void buildProgram(Component* all){
 		addMOD();
 	}
 	Component* a = all->children; //a = {[procedures], main}
+	buildingProcedures=true;
 	buildProcedures(a);
+	buildingProcedures=false;
 	buildMain(a->next);
 }
 
 
 //PROCEDURE MAKING
 void makeProcedure(Component* procedure){
+	Component* proc_head;
+	Component* declarations;
+	Component* commands;
 	if(procedure->type==151){//with declarations-registers
-		std::cout<<"#PROCEDURE "<<procedure->children->children->pid_name<<"\n";
-		
+		//std::cout<<"#PROCEDURE "<<procedure->children->children->pid_name<<"\n";
+		/*
+		void declare_var(Component* declaration){
+			std::string name(declaration->pid_name);
+			vars::Variable var(name);
+			variables.emplace(name,var);
+			memInc();
+		}
+	*/
+	proc_head = procedure->children;
+	declarations = proc_head->next;
+	commands = declarations->next;
 	}else if(procedure->type==152){//without declarations
-		std::cout<<"#PROCEDURE "<<procedure->children->children->pid_name<<"\n";
+		//std::cout<<"#PROCEDURE "<<procedure->children->children->pid_name<<"\n";
+		proc_head = procedure->children;
+		declarations = nullptr;
+		commands = proc_head->next;
 	}else{
 		std::cout<<"MKPROC:SHOULD NOT GET HERE WITH TYPE:"<<procedure->type<<"\n";
 	}
+
 }
 void buildProcedures(Component* procedures){
 	if(forUses>0){
