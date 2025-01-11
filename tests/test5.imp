@@ -1,0 +1,7 @@
+PROGRAM IS
+    n,k
+BEGIN
+    READ n;
+    k := -10*n;
+    WRITE k;
+END

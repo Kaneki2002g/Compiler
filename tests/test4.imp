@@ -1,0 +1,8 @@
+PROGRAM IS
+	n,p
+BEGIN
+	READ n;
+	READ p;
+	p:=n*p;
+	WRITE p;
+END

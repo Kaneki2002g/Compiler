@@ -83,6 +83,7 @@ procedures   : procedures PROCEDURE proc_head IS declarations T_BEGIN commands T
 																							} else {
 																								lastnext($$->children)->next=proc;
 																							}
+																							useProc();
 																						}
              | procedures PROCEDURE proc_head IS T_BEGIN commands T_END					{	
 																							$$=$1; //procedures
@@ -99,6 +100,7 @@ procedures   : procedures PROCEDURE proc_head IS declarations T_BEGIN commands T
 																							} else {
 																								lastnext($$->children)->next=proc;
 																							}
+																							useProc();
 																						}
              | 																			{
 																							$$ = new Component();
@@ -491,12 +493,12 @@ expression   : value					{
 												useMul();
 											} else{
 												if($1->children->type==1){
-													if($1->children->number_value>10){
+													if($1->children->number_value>49 && $1->children->number_value<(-49)){
 														useMul();
 													}
 												}
 												if($3->children->type==1){
-													if($3->children->number_value>10){
+													if($3->children->number_value>49 && $3->children->number_value<(-49)){
 														useMul();
 													}
 												}

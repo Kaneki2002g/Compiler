@@ -19,6 +19,7 @@ void useMul();
 void useDiv();
 void useMod();
 void useFor();
+void useProc();
 
 void buildProgram(Component* all);
 void buildProcedures(Component* procedures);
