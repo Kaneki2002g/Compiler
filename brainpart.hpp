@@ -1,6 +1,7 @@
 #ifndef BRAINPART_HPP
 #define BRAINPART_HPP
 #include <iostream>
+#include <fstream>
 #include <stdlib.h>
 #include <cstring>
 #include <string>
