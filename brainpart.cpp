@@ -1012,7 +1012,18 @@ void doArithmetic(Component* expr){
 		//TODO
 		break;
 		case 66:
+			if(buildingProcedures){
+					currentProcedure->useDifferentProcedure();
+			}
 			log("MODULO");
+			loadORset(first);
+			STORE(getareg());
+			loadORset(second);
+			STORE(getbreg());
+			SET(ASSLINE+3);
+			STORE(getretreg());
+			JUMP(divPlace-ASSLINE);
+			LOAD(getareg());
 		//TODO
 		break;
 	}
@@ -1122,6 +1133,13 @@ void buildProgram(Component* all){
 		addDIV();
 	}
 	if(modUses>0){
+		log("RESERVING REGISTERS FOR MODULO, ADDING DIVISION");
+		auto r = getretreg();
+		auto a = getareg();
+		auto b = getbreg();
+		auto o = getoreg();
+		auto mo = getmonereg();
+		divPlace = ASSLINE;
 		addMOD();
 	}
 	Component* a = all->children; //a = {[procedures], main}
