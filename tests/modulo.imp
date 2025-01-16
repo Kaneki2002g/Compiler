@@ -1,0 +1,24 @@
+PROCEDURE modulo(a, b) IS
+BEGIN
+  IF a<0 THEN
+
+    WHILE a<0 DO
+        a := a+b;
+    ENDWHILE
+
+  ENDIF
+
+  WHILE a>=b DO
+    a := a-b;
+  ENDWHILE
+
+END
+
+PROGRAM IS
+ a,b
+BEGIN
+  READ a;
+  READ b;
+  modulo(a,b);
+  WRITE a;
+END

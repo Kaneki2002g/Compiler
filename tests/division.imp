@@ -1,0 +1,9 @@
+PROGRAM IS
+    a,b,temp,mult
+BEGIN
+WHILE a>=b DO
+    temp:=b;
+    mult:=1;
+    temp:=temp + temp;
+ENDWHILE
+END

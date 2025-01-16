@@ -17,9 +17,9 @@ int main(int argc, char** argv) {
         }
     }
 
-    std::cout<<"Parsing.\n";
+    //std::cout<<"Parsing.\n";
     if (yyparse() == 0) {
-        std::cout<<"Parsing completed successfully.\n";
+        //std::cout<<"Parsing completed successfully.\n";
     } else {
         std::cout<<"Parsing failed.\n";
     }

@@ -35,6 +35,7 @@ long long helpCounter = 0;
 
 long long mainLine;
 long long mulPlace;
+long long divPlace;
 
 
 int mulUses=0;
@@ -251,6 +252,71 @@ long long getmonereg(){
 		moneset=true;
 	}
 	return monereg;
+}
+
+
+//sareg,treg,mreg,yreg for division and modulo
+bool stmy = false;
+long long sareg = 0;
+long long treg = 0;
+long long mreg = 0;
+long long yreg = 0;
+
+long long getsareg(){
+	if(!stmy){
+		sareg = memCounter;
+		memInc();
+		treg = memCounter;
+		memInc();
+		mreg = memCounter;
+		memInc();
+		yreg = memCounter;
+		memInc();
+		stmy = true;
+	}
+	return sareg;
+}
+long long gettreg(){
+	if(!stmy){
+		sareg = memCounter;
+		memInc();
+		treg = memCounter;
+		memInc();
+		mreg = memCounter;
+		memInc();
+		yreg = memCounter;
+		memInc();
+		stmy = true;
+	}
+	return treg;
+}
+long long getmreg(){
+	if(!stmy){
+		sareg = memCounter;
+		memInc();
+		treg = memCounter;
+		memInc();
+		mreg = memCounter;
+		memInc();
+		yreg = memCounter;
+		memInc();
+		stmy = true;
+	}
+	return mreg;
+}
+long long getyreg(){
+	if(!stmy){
+		sareg = memCounter;
+		memInc();
+		treg = memCounter;
+		memInc();
+		mreg = memCounter;
+		memInc();
+		yreg = memCounter;
+		memInc();
+		stmy = true;
+	}
+	return yreg;
 }
 
 //
@@ -595,8 +661,81 @@ void addMUL(){ //TODO: MULTIPLICATION TO CHANGE, DOESN't WORK FOR NEGATIVES
 	SUB(getoreg());
 	RTRN(getretreg());
 }
-void addDIV(){}
-void addMOD(){}
+void addDIV(){
+	SET(0);
+	STORE(getoreg());
+	LOAD(getbreg()); //dzielenie
+	JZERO(62);
+	JPOS(6);
+	SUB(getbreg());
+	SUB(getbreg());
+	STORE(getbreg());
+	LOAD(getmonereg());
+	JUMP(2);
+	LOAD(getonereg());
+	STORE(getbsign());
+	LOAD(getareg());
+	JZERO(53);
+	JPOS(6);
+	SUB(getareg());
+	SUB(getareg());
+	STORE(getareg());
+	LOAD(getmonereg());
+	JUMP(2);
+	LOAD(getonereg());
+	STORE(getasign());
+	LOAD(getasign());
+	ADD(getbsign());
+	STORE(getsareg());
+	LOAD(getareg());
+	SUB(getbreg());
+	JNEG(25);
+	LOAD(getbreg());
+	STORE(gettreg());
+	LOAD(getonereg());
+	STORE(getmreg());
+	LOAD(gettreg());
+	ADD(gettreg());
+	STORE(getyreg());
+	LOAD(getareg());
+	SUB(getyreg());
+	JNEG(8);
+	LOAD(gettreg());
+	ADD(gettreg());
+	STORE(gettreg());
+	LOAD(getmreg());
+	ADD(getmreg());
+	STORE(getmreg());
+	JUMP(-12);
+	LOAD(getareg());
+	SUB(gettreg());
+	STORE(getareg());
+	LOAD(getoreg());
+	ADD(getmreg());
+	STORE(getoreg());
+	JUMP(-26);
+	LOAD(getsareg());
+	JZERO(2);
+	JUMP(9); //do zmiany
+	LOAD(getareg());//1
+	JZERO(4);//2
+	LOAD(getoreg());
+	ADD(getonereg());
+	STORE(getoreg());
+	SUB(getoreg());
+	SUB(getoreg());
+	STORE(getoreg());
+	LOAD(getbsign());
+	JPOS(4);
+	LOAD(getareg());
+	SUB(getbreg());
+	STORE(getareg());
+	LOAD(getoreg());
+	RTRN(getretreg());
+}
+void addMOD(){
+	addDIV();
+}
 
 
 //VARIABLE MANIPULATION FUNCTIONS
@@ -855,14 +994,20 @@ void doArithmetic(Component* expr){
 			if(first->children->type==1 && second->children->type==1){
 				
 				SET(first->children->number_value/second->children->number_value); //NOTE: MAY GO OUT OF LONG LONG BOUNDARIES SHOULD MAKE TEXT_CONVERSION_ADD and SET(string)
-			} else if( second->children->type==1 && second->children->number_value==2){
+			} else if(second->children->type==1 && second->children->number_value==2){
 				loadORset(first);
 				HALF();
 			}else{
 				if(buildingProcedures){
 					currentProcedure->useDifferentProcedure();
 				}
-				
+				loadORset(first);
+				STORE(getareg());
+				loadORset(second);
+				STORE(getbreg());
+				SET(ASSLINE+3);
+				STORE(getretreg());
+				JUMP(divPlace-ASSLINE);
 			}
 		//TODO
 		break;
@@ -967,6 +1112,13 @@ void buildProgram(Component* all){
 		addMUL();
 	}
 	if(divUses>0){
+		log("RESERVING REGISTERS FOR DIVISION, ADDING DIVISION");
+		auto r = getretreg();
+		auto a = getareg();
+		auto b = getbreg();
+		auto o = getoreg();
+		auto mo = getmonereg();
+		divPlace = ASSLINE;
 		addDIV();
 	}
 	if(modUses>0){
@@ -1402,34 +1554,16 @@ void buildCommands(Component* commands){
 				break;
 				}
 			case 125:{
-				//TODO
-				//std::cout<<"repeatunitl"<<std::endl;
-				//repeatuntil
 				repeatUntil(comm);
 			}
 			break;
 			case 126:
-			//TODO
-			//std::cout<<"forfromtodo"<<std::endl;
-			//for...from...to...do...
-			//SHOULD MAKE LOCAL VARIABLE STACK/TABLE
-			//OR CHECK FIELD IN VARIABLE (EG. currentlyUsed=true;)
-			//IN PROCEDURES FOR LOOPS SHOULD HAVE ITERATOR AS SEPARATE REGISTER SAVED
 			makefor(comm);
 			break;
 			case 127:
-			//TODO
-			//std::cout<<"forfromdowntodo"<<std::endl;
-			//for...from...downto...do...
-			//--||--
 			makefor(comm);
 			break;
 			case 128:
-			//TODO
-			//proc_call
-			//SET REGISTERS
-			//JUMP TO PROCEDURE
-			//RETURN WITH RTRN
 			procedureCall(comm);
 			break;
 			case 129:

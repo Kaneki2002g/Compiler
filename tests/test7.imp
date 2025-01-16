@@ -1,0 +1,7 @@
+PROGRAM IS
+	a,n
+BEGIN
+	a:=-5;
+	n:=a/2;
+	WRITE n;
+END
