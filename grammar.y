@@ -65,6 +65,7 @@ program_all  : procedures main		{
 										$1->next = $2;
 										$$->next=nullptr;
 										buildProgram($$);
+										buildFile();
 									}
 
 procedures   : procedures PROCEDURE proc_head IS declarations T_BEGIN commands T_END	{	

@@ -9,6 +9,7 @@
 #include <map>
 #include <stack>
 #include "structs.h"
+#include "CommandStruct.hpp"
 
 Component* lastnext(Component* comp);
 void declare_var(Component* declaration);
@@ -27,5 +28,7 @@ void buildProcedures(Component* procedures);
 void buildMain(Component* main);
 void declareVariables(Component* declarations);
 void buildCommands(Component* commands);
+
+void buildFile();
 
 #endif // BRAINPART_HPP

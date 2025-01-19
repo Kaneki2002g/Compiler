@@ -2,7 +2,6 @@
 
 bool buildingProcedures = false; //flag for building procedures
 
-//TODO: Change long long to long longs if needed
 
 void log(const std::string& message) {
     static bool firstCall = true; 
@@ -48,6 +47,9 @@ std::map<std::string,int> procedure_uses;
 std::vector<long long> jumpLines;
 long long rLines = -1;
 
+std::vector<CommandStruct*> commands;
+std::vector<CommandStruct*> unknownJumps;
+
 long long getVPOS(){
 	log("MAKING UNKNOWN JUMP #"+std::to_string(jumpLines.size()+1));
 	rLines++;
@@ -57,17 +59,29 @@ long long getVPOS(){
 void setVPOS(long long pos, long long length){
 	jumpLines[pos]=length; //NOTE: maybe +1
 	log("SET #"+std::to_string(pos+1)+" JUMP TO " + std::to_string(length));
+	unknownJumps[pos]->value = std::to_string(length);
 	//std::cout<<"#SET "<<pos+1<<" JUMP TO "<<length<<"\n";
 }
 void toProg(std::string comm, long long i){
 	//TEMP
-	std::cout<<comm<<" "<<i<<"\n";
+	//std::cout<<comm<<" "<<i<<"\n";
+
+	commands.push_back(new CommandStruct{comm,std::to_string(i)});
+
 	ASSLINE++;
 }
 void toProg(std::string comm){
 	//TEMP
-	std::cout<<comm<<"\n";
+	//std::cout<<comm<<"\n";
+	commands.push_back(new CommandStruct{comm,""});
 	ASSLINE++;
+}
+
+void buildFile(){
+	for (CommandStruct* comm : commands){
+		//temp
+		std::cout<<comm->command<<" "<<comm->value<<std::endl;
+	}
 }
 
 void GET(long long i){
@@ -126,24 +140,29 @@ void HALT(){
 	toProg("HALT");
 }
 
-void uJUMP(long long i){
+//UNKNOWN JUMPS
+void uJUMP(long long i){ 
 	//TEMP
 	JUMP(123456789);
+	unknownJumps.push_back(commands[commands.size()-1]);
 	//TODO
 }
 void uJZERO(long long i){
 	//TEMP
 	JZERO(123456789);
+	unknownJumps.push_back(commands[commands.size()-1]);
 	//TODO
 }
 void uJPOS(long long i){
 	//TEMP
 	JPOS(123456789);
+	unknownJumps.push_back(commands[commands.size()-1]);
 	//TODO
 }
 void uJNEG(long long i){
 	//TEMP
 	JNEG(123456789);
+	unknownJumps.push_back(commands[commands.size()-1]);
 	//TODO
 }
 /*
@@ -1159,8 +1178,15 @@ void buildProgram(Component* all){
 		STORE(mone);
 	}
 	buildMain(a->next);
-	log("JUMP" + std::to_string(mainLine)+" AT THE BEGINNING");
+
 	HALT();
+	
+	if(mainLine>0){
+		log("JUMP" + std::to_string(mainLine)+" AT THE BEGINNING");
+		commands.insert(commands.begin(), new CommandStruct{"JUMP", std::to_string(mainLine)});
+		}
+	
+	
 	log("END OF PROGRAM");
 	log("UNKNOWN JUMPS:");
 	for(int i=0;i<jumpLines.size();i++){
