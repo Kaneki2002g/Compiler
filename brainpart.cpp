@@ -1,6 +1,7 @@
 #include "brainpart.hpp"
 
 bool buildingProcedures = false; //flag for building procedures
+bool encounteredErrors = false;
 
 
 void log(const std::string& message) {
@@ -49,7 +50,7 @@ long long rLines = -1;
 
 std::vector<CommandStruct*> commands;
 std::vector<CommandStruct*> unknownJumps;
-
+std::vector<std::string> errorLog;
 long long getVPOS(){
 	log("MAKING UNKNOWN JUMP #"+std::to_string(jumpLines.size()+1));
 	rLines++;
@@ -78,6 +79,11 @@ void toProg(std::string comm){
 }
 
 void buildFile(){
+	for(int i=0;i<jumpLines.size();i++){
+		//log(std::to_string(i+1)+": "+std::to_string(jumpLines[i]));
+		unknownJumps[i]->value = std::to_string(jumpLines[i]);
+		//std::cout<<jumpLines[i]<<std::endl;
+	}
 	for (CommandStruct* comm : commands){
 		//temp
 		std::cout<<comm->command<<" "<<comm->value<<std::endl;
@@ -381,6 +387,7 @@ namespace vars{
 			int timesUsed(){return used;}
 			std::string getName(){return name;}
 			long long int getPos(long long i){return memory_cell+(i-first);/*TODO - Check if (i-first+1) is better && Guard, for OutOfBounds type error*/}
+			bool inBounds(long long field){if(field >= first && field <= last){return true;}else{return false;}}
 		private:
 			std::string name;
 			std::vector<bool> sett;
@@ -451,6 +458,7 @@ namespace vars{
 						return 0;
 					} catch(const std::out_of_range& e){
 						//TODO: error table not found
+						encounteredErrors = true;
 						return 1;
 					}
 				}
@@ -465,6 +473,8 @@ namespace vars{
 						return 0;
 					} catch(const std::out_of_range& e){
 						//TODO: error table not found
+						encounteredErrors = true;
+						return 1;
 					}
 				}
 			}
@@ -490,6 +500,7 @@ namespace vars{
 					}catch(const std::out_of_range& e){
 						log("ERROR SEARCHING VARIABLE: "+cname);
 						//TODO ERROR
+						encounteredErrors=true;
 						//std::cout<<"ERROR: variable not found or wrong type! line: "<<call->code_line<<"\n";//just for now
 						//std::cout<<"SEEKING: "<<cname<<"\n";
 					}
@@ -517,6 +528,7 @@ namespace vars{
 						}catch(const std::out_of_range& e){
 							log("ERROR SEARCHING TABLE: "+tname);
 							//TODO ERROR IF NON EI
+							encounteredErrors = true;
 						}
 					}
 				}else if(call->type==33){//tab[num]
@@ -533,6 +545,7 @@ namespace vars{
 						}catch(const std::out_of_range& e){
 							//TODO ERROR IF NON EI
 							log("ERROR SEARCHING TABLE: "+tname);
+							encounteredErrors=true;
 						}
 					}
 				}
@@ -550,6 +563,7 @@ namespace vars{
 						}catch(const std::out_of_range& e){
 							//TODO ERROR
 							log("ERROR VARIABLE NOT FOUND");
+							encounteredErrors=true;
 						}
 					}
 				}else if(ident->type==33){
@@ -570,6 +584,7 @@ namespace vars{
 						}catch(const std::out_of_range& e){
 							//TODO ERROR
 							log("ERROR TABLE NOT FOUND");
+							encounteredErrors=true;
 						}
 					}
 				}else{
@@ -596,6 +611,7 @@ namespace vars{
 								log("STORING IN GIVEN TAB[PID]: "+tname);
 							}catch(const std::out_of_range& e){
 								//TODO ERROR
+								encounteredErrors=true;
 							}
 						}
 				}
@@ -628,7 +644,7 @@ Component* lastnext(Component* comp){
 		return tot;
 }
 
-void addMUL(){ //TODO: MULTIPLICATION TO CHANGE, DOESN't WORK FOR NEGATIVES
+void addMUL(){
 	SET(0); //pre processing 
 	STORE(getoreg()); //setting outcome register to 0
 	LOAD(getareg()); //checking a sign
@@ -1180,7 +1196,7 @@ void buildProgram(Component* all){
 	buildMain(a->next);
 
 	HALT();
-	
+
 	if(mainLine>0){
 		log("JUMP" + std::to_string(mainLine)+" AT THE BEGINNING");
 		commands.insert(commands.begin(), new CommandStruct{"JUMP", std::to_string(mainLine)});
