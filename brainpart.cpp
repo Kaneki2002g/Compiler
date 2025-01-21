@@ -79,14 +79,20 @@ void toProg(std::string comm){
 }
 
 void buildFile(){
-	for(int i=0;i<jumpLines.size();i++){
+	if(!encounteredErrors){
+		for(int i=0;i<jumpLines.size();i++){
 		//log(std::to_string(i+1)+": "+std::to_string(jumpLines[i]));
 		unknownJumps[i]->value = std::to_string(jumpLines[i]);
 		//std::cout<<jumpLines[i]<<std::endl;
-	}
-	for (CommandStruct* comm : commands){
-		//temp
-		std::cout<<comm->command<<" "<<comm->value<<std::endl;
+		}
+		for (CommandStruct* comm : commands){
+			//temp
+			std::cout<<comm->command<<" "<<comm->value<<std::endl;
+		}
+	} else {
+		for(int i = 0; i<errorLog.size();i++){
+			std::cout<<errorLog[i]<<std::endl;
+		}
 	}
 }
 
@@ -151,25 +157,21 @@ void uJUMP(long long i){
 	//TEMP
 	JUMP(123456789);
 	unknownJumps.push_back(commands[commands.size()-1]);
-	//TODO
 }
 void uJZERO(long long i){
 	//TEMP
 	JZERO(123456789);
 	unknownJumps.push_back(commands[commands.size()-1]);
-	//TODO
 }
 void uJPOS(long long i){
 	//TEMP
 	JPOS(123456789);
 	unknownJumps.push_back(commands[commands.size()-1]);
-	//TODO
 }
 void uJNEG(long long i){
 	//TEMP
 	JNEG(123456789);
 	unknownJumps.push_back(commands[commands.size()-1]);
-	//TODO
 }
 /*
 REGISTERS:
@@ -386,7 +388,7 @@ namespace vars{
 			bool isSet(long long i){return sett[i];}
 			int timesUsed(){return used;}
 			std::string getName(){return name;}
-			long long int getPos(long long i){return memory_cell+(i-first);/*TODO - Check if (i-first+1) is better && Guard, for OutOfBounds type error*/}
+			long long int getPos(long long i){return memory_cell+(i-first);}
 			bool inBounds(long long field){if(field >= first && field <= last){return true;}else{return false;}}
 		private:
 			std::string name;
@@ -501,6 +503,8 @@ namespace vars{
 						log("ERROR SEARCHING VARIABLE: "+cname);
 						//TODO ERROR
 						encounteredErrors=true;
+						errorLog.push_back("AT LINE: "+std::to_string(call->code_line)+" VARIABLE NOT FOUND!");
+		
 						//std::cout<<"ERROR: variable not found or wrong type! line: "<<call->code_line<<"\n";//just for now
 						//std::cout<<"SEEKING: "<<cname<<"\n";
 					}
@@ -529,6 +533,7 @@ namespace vars{
 							log("ERROR SEARCHING TABLE: "+tname);
 							//TODO ERROR IF NON EI
 							encounteredErrors = true;
+							errorLog.push_back("AT LINE: "+std::to_string(call->code_line)+" TABLE NOT FOUND!");
 						}
 					}
 				}else if(call->type==33){//tab[num]
@@ -543,9 +548,9 @@ namespace vars{
 							LOADI(0);
 							log("LOADING GIVEN TABLE: "+tname);
 						}catch(const std::out_of_range& e){
-							//TODO ERROR IF NON EI
 							log("ERROR SEARCHING TABLE: "+tname);
 							encounteredErrors=true;
+							errorLog.push_back("AT LINE: "+std::to_string(call->code_line)+" TABLE NOT FOUND!");
 						}
 					}
 				}
@@ -564,6 +569,7 @@ namespace vars{
 							//TODO ERROR
 							log("ERROR VARIABLE NOT FOUND");
 							encounteredErrors=true;
+							errorLog.push_back("AT LINE: "+std::to_string(ident->code_line)+" VARIABLE NOT FOUND!");
 						}
 					}
 				}else if(ident->type==33){
@@ -585,6 +591,7 @@ namespace vars{
 							//TODO ERROR
 							log("ERROR TABLE NOT FOUND");
 							encounteredErrors=true;
+							errorLog.push_back("AT LINE: "+std::to_string(ident->code_line)+" TABLE NOT FOUND!");
 						}
 					}
 				}else{
@@ -612,6 +619,7 @@ namespace vars{
 							}catch(const std::out_of_range& e){
 								//TODO ERROR
 								encounteredErrors=true;
+								errorLog.push_back("AT LINE: "+std::to_string(ident->code_line)+" TABLE NOT FOUND!");
 							}
 						}
 				}
@@ -831,8 +839,9 @@ long long getMemCell(Component* call){
 			vars::Variable var = variables.at(name);	
 			outcome = var.getPos();
 		}catch(const std::out_of_range& e){
-			//TODO
 			//throw error at varline
+			encounteredErrors = true;
+			errorLog.push_back("AT LINE: "+std::to_string(call->code_line)+" VARIABLE NOT FOUND!");
 		}
 	} else if(call->type==33){//table[num]
 		std::string name(call->children->pid_name);
@@ -845,23 +854,24 @@ long long getMemCell(Component* call){
 				log("something wrong!");
 			}
 			log("TRYING TO GET POSITION: "+std::to_string(call->children->next->number_value)+" FROM TABLE: "+name);
-			//TODO
 			//error if out of bounds
+			if(!tab.inBounds(call->children->next->number_value)){
+				encounteredErrors = true;
+				errorLog.push_back("AT LINE: "+std::to_string(call->code_line)+" OUT OF BOUNDS OF TABLE!");
+			}
 		}catch(const std::out_of_range& e){
-			//TODO
 			//throw error at varline
-			//or if out of bounds
+			encounteredErrors = true;
+			errorLog.push_back("AT LINE: "+std::to_string(call->code_line)+" TABLE NOT FOUND!");
 		}
-	} else if(call->type==32){//table[variable]
+	} else if(call->type==32){//table[variable] this function is never used with this argument
 		std::string name(call->children->pid_name);
 		try{
 			vars::Table tab = tables.at(name);
 			//outcome = tab.getPos(call->next->number_value);
-			//TODO
 			//indirect call
 			//throw error if variable is table
 		}catch(const std::out_of_range& e){
-			//TODO
 			//throw error at varline
 		}
 	} else{
@@ -871,7 +881,6 @@ long long getMemCell(Component* call){
 }
 
 //ARITHMETIC/LOGIC FUNCTIONS
-//TODO
 void loadORset(Component* value){
 	Component* check = value->children;
 	if(check->type==1){
@@ -1024,7 +1033,7 @@ void doArithmetic(Component* expr){
 				JUMP(mulPlace-ASSLINE);
 			}
 		break;
-		case 65://TODO DIVISION
+		case 65:
 			log("DIVISION");
 			if(first->children->type==1 && second->children->type==1){
 				
@@ -1044,7 +1053,6 @@ void doArithmetic(Component* expr){
 				STORE(getretreg());
 				JUMP(divPlace-ASSLINE);
 			}
-		//TODO
 		break;
 		case 66:
 			if(buildingProcedures){
@@ -1059,10 +1067,8 @@ void doArithmetic(Component* expr){
 			STORE(getretreg());
 			JUMP(divPlace-ASSLINE);
 			LOAD(getareg());
-		//TODO
 		break;
 	}
-	//STORE(adr);
 }
 
 int compareA(Component* cond){
@@ -1274,7 +1280,6 @@ void buildProcedures(Component* procedures){
 
 	Component* procedure = procedures->children;
 	while(procedure!=nullptr){
-		//TODO:Procedure translation
 		makeProcedure(procedure);
 		procedure=procedure->next;
 	}
@@ -1496,50 +1501,68 @@ void procedureCall(Component* proc_call){
 	std::string pname(pid->children->pid_name);
 	//std::cout<<"PROC: "<<pname<<"\n";
 	Component* args = pid->children->next;//->[[arg1]->[arg2]->...]
+	vars::Procedure* proc;
 	//std::cout<<"SEARCHING\n";
-	vars::Procedure* proc = &procedures.at(pname);
+	if(procedures.find(pname)!=procedures.end()){
+		proc = &procedures.at(pname);
+	} else{
+		encounteredErrors = true;
+		errorLog.push_back("AT LINE: "+std::to_string(proc_call->code_line)+" NON-EXISTENT PROCEDURE!");
+		return;
+	}
 	//std::cout<<"check0!\n";
-	//TODO ERROR IF NOT FOUND
+
 	if(buildingProcedures){
-		if(proc->getName()==currentProcedure->getName()){
-				std::cout<<"check1!\n";
-			//TODO: Throw error
+		if(pname == currentProcedure->getName()){
+			//CALLING ITSELF ERROR, IT IS SATISFIED BY PREVIOUS IF-ELSE
+			return;
 		}
 		currentProcedure->useDifferentProcedure();
 	}
-	//if(proc==)TODO: error if proc not yet declared
+	
 	Component* arg = args->children;
 	int pos = 0;
 	while(arg!=nullptr){
 		if (pos>proc->howManyVars()){
 			std::cout<<proc->howManyVars()<<"\n";
-			//TODO: ERROR out of bounds
+			encounteredErrors = true;
+			errorLog.push_back("AT LINE: "+std::to_string(proc_call->code_line)+" TOO MANY PROCEDURE ARGUMENTS!");
 		}
 		//std::cout<<proc->howManyVars()<<"\n";
 		if(proc->at_table(pos)){//expecting table
 			std::string tname(arg->pid_name);
 			if(buildingProcedures){
-				currentProcedure->ltfproc(tname);
+				int er = currentProcedure->ltfproc(tname);
+				if(er==1){
+					encounteredErrors = true;
+					errorLog.push_back("AT LINE: "+std::to_string(proc_call->code_line)+" TABLE NOT FOUND!");
+				}
 				STORE(proc->addressfor(pos));
 			}else{
 				try{
 					SET(tables.at(tname).getPos(0));
 					STORE(proc->addressfor(pos));
 				} catch(const std::out_of_range& e){
-					//TODO: ERROR: not found table
+					encounteredErrors = true;
+					errorLog.push_back("AT LINE: "+std::to_string(proc_call->code_line)+" PROCEDURE EXPECTED AN ARRAY!");
 				}
 			}
 		}else{//expecting variable
 			std::string vname(arg->pid_name);
 			if(buildingProcedures){
-				currentProcedure->ltvproc(vname);
+				int er = currentProcedure->ltvproc(vname);
+				if(er==1){
+					encounteredErrors = true;
+					errorLog.push_back("AT LINE: "+std::to_string(proc_call->code_line)+" VARIABLE NOT FOUND!");
+				}
 				STORE(proc->addressfor(pos));
 			}else{
 				try{
 					SET(variables.at(vname).getPos());
 					STORE(proc->addressfor(pos));
 				} catch(const std::out_of_range& e){
-					//TODO: ERROR: not found table
+					encounteredErrors = true;
+					errorLog.push_back("AT LINE: "+std::to_string(proc_call->code_line)+" PROCEDURE EXPECTED A VARIABLE!");
 				}
 			}
 		}
@@ -1547,7 +1570,8 @@ void procedureCall(Component* proc_call){
 		arg=arg->next;
 	}
 	if(pos<proc->howManyVars()){
-		//TODO: ERROR too little variables
+		encounteredErrors = true;
+		errorLog.push_back("AT LINE: "+std::to_string(proc_call->code_line)+" INSUFFICIENT PROCEDURE ARGUMENTS!");
 	}
 	SET(ASSLINE+3);
 	STORE(proc->getrtrn());
@@ -1559,14 +1583,22 @@ void buildCommands(Component* commands){
 	while(comm!=nullptr){
 		//std::cout<<"TYPE: "<<comm->type;
 		switch(comm->type){
-			case 121:{//TODO:ERROR IF SETTING LOOP VARIABLE
+			case 121:{
 				doArithmetic(comm->children->next);
 
 				if(!buildingProcedures){
-					//NOTE: WON'T WORK WITH tab[num] or tab[pid]
+					
 					if(comm->children->type!=32){
 						log("NORMAL PLACING! type: "+std::to_string(comm->type));
 						STORE(getMemCell(comm->children));
+
+						//ERROR editing loop variable
+						if(variables.find(std::string(comm->children->children->pid_name)) != variables.end()){
+							if(variables.at(std::string(comm->children->children->pid_name)).isLVar()){
+								encounteredErrors = true;
+								errorLog.push_back("AT LINE: "+std::to_string(comm->children->children->code_line)+" - EDITING LOOP VARIABLE!");
+							}
+						}
 					} else{
 						log("PLACING IN UNKNOWN TAB PLACE");
 						STORE(getoreg());
