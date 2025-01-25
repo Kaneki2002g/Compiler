@@ -78,17 +78,25 @@ void toProg(std::string comm){
 	ASSLINE++;
 }
 
-void buildFile(){
+void buildFile(std::string filename){
 	if(!encounteredErrors){
 		for(int i=0;i<jumpLines.size();i++){
 		//log(std::to_string(i+1)+": "+std::to_string(jumpLines[i]));
 		unknownJumps[i]->value = std::to_string(jumpLines[i]);
 		//std::cout<<jumpLines[i]<<std::endl;
 		}
+		std::ofstream plik(filename);
+		if (!plik.is_open()) {
+			std::cerr << "Nie można otworzyć pliku: " << filename << std::endl;
+			return;
+		}
+		
 		for (CommandStruct* comm : commands){
 			//temp
-			std::cout<<comm->command<<" "<<comm->value<<std::endl;
+			//std::cout<<comm->command<<" "<<comm->value<<std::endl;
+			plik << comm->command<<" "<<comm->value<< "\n";
 		}
+		plik.close();
 	} else {
 		for(int i = 0; i<errorLog.size();i++){
 			std::cout<<errorLog[i]<<std::endl;
@@ -468,6 +476,7 @@ namespace vars{
 			int ltvproc(std::string tname){
 				try{
 					SET(localVariables.at(tname).getPos());
+					localVariables.at(tname).set();
 					return 0;
 				} catch(const std::out_of_range& e){
 					try{
@@ -495,6 +504,10 @@ namespace vars{
 				try{
 					LOAD(localVariables.at(cname).getPos());
 					log("LOADING LOCAL VARIABLE: "+cname);
+					if(!localVariables.at(cname).isSet()){
+						encounteredErrors = true;
+						errorLog.push_back("AT LINE: "+std::to_string(call->code_line)+" VARIABLE NOT SET!");
+					}
 				}catch(const std::out_of_range& e){
 					try{
 						LOADI(givenVariables.at(cname).getPos());
@@ -503,7 +516,7 @@ namespace vars{
 						log("ERROR SEARCHING VARIABLE: "+cname);
 						//TODO ERROR
 						encounteredErrors=true;
-						errorLog.push_back("AT LINE: "+std::to_string(call->code_line)+" VARIABLE NOT FOUND!");
+						errorLog.push_back("AT LINE: "+std::to_string(call->code_line)+" VARIABLE "+cname+" NOT FOUND! err_type:1.2");
 		
 						//std::cout<<"ERROR: variable not found or wrong type! line: "<<call->code_line<<"\n";//just for now
 						//std::cout<<"SEEKING: "<<cname<<"\n";
@@ -560,6 +573,7 @@ namespace vars{
 					std::string vname(ident->children->pid_name);
 					try{
 						STORE(localVariables.at(vname).getPos());
+						localVariables.at(vname).set();
 						log("STORING IN LOCAL VARIABLE");
 					}catch(const std::out_of_range& e){
 						try{
@@ -569,7 +583,7 @@ namespace vars{
 							//TODO ERROR
 							log("ERROR VARIABLE NOT FOUND");
 							encounteredErrors=true;
-							errorLog.push_back("AT LINE: "+std::to_string(ident->code_line)+" VARIABLE NOT FOUND!");
+							errorLog.push_back("AT LINE: "+std::to_string(ident->code_line)+" VARIABLE "+vname+" NOT FOUND! err_type:1.3");
 						}
 					}
 				}else if(ident->type==33){
@@ -841,7 +855,7 @@ long long getMemCell(Component* call){
 		}catch(const std::out_of_range& e){
 			//throw error at varline
 			encounteredErrors = true;
-			errorLog.push_back("AT LINE: "+std::to_string(call->code_line)+" VARIABLE NOT FOUND!");
+			errorLog.push_back("AT LINE: "+std::to_string(call->code_line)+" VARIABLE "+name+" NOT FOUND! err_type:1.1");
 		}
 	} else if(call->type==33){//table[num]
 		std::string name(call->children->pid_name);
@@ -896,6 +910,12 @@ void loadORset(Component* value){
 			}
 		}else{
 			if(check->type!=32){
+				if(check->type==31 && variables.find(std::string(check->children->pid_name))!=variables.end()){
+					if(!variables.at(std::string(check->children->pid_name)).isSet()){
+						encounteredErrors = true;
+						errorLog.push_back("AT LINE: "+std::to_string(check->children->code_line)+" VARIABLE NOT SET!");
+					}
+				}
 				log("LOADING FROM KNOWN PLACE");
 				LOAD(getMemCell(check));
 			} else{
@@ -1437,14 +1457,20 @@ void makefor(Component* loop){
 	
 	//NOTE:workaround for example 6, which in my opinion should fail because j should be local, instead is global!
 	if(variables.find(it_name)!=variables.end()){
-		log("USING GLOBAL ITERATOR VARIABLE!! SHOULD NOT HAPPEN!");
+		log("USING GLOBAL VARIABLE AS ITERATOR!");
+		if(variables.at(it_name).isLVar()==true){
+			encounteredErrors = true;
+			errorLog.push_back("AT LINE: "+std::to_string(pid->code_line)+" REINVENTING THE ITERATOR!");
+		}
 		variables.at(it_name).makeLVar();
+		variables.at(it_name).set();
 		iterator = variables.at(it_name);
 		isGlobal=true;
 	} else{
 		iterator = vars::Variable(it_name);
 		iterator.makeLVar();
 		memInc();
+		iterator.set();
 	}
 	log("OKAY");
 	if(!buildingProcedures){
@@ -1553,12 +1579,13 @@ void procedureCall(Component* proc_call){
 				int er = currentProcedure->ltvproc(vname);
 				if(er==1){
 					encounteredErrors = true;
-					errorLog.push_back("AT LINE: "+std::to_string(proc_call->code_line)+" VARIABLE NOT FOUND!");
+					errorLog.push_back("AT LINE: "+std::to_string(proc_call->code_line)+" VARIABLE "+vname+" NOT FOUND! err_type:1.0");
 				}
 				STORE(proc->addressfor(pos));
 			}else{
 				try{
 					SET(variables.at(vname).getPos());
+					variables.at(vname).set();
 					STORE(proc->addressfor(pos));
 				} catch(const std::out_of_range& e){
 					encounteredErrors = true;
@@ -1589,8 +1616,14 @@ void buildCommands(Component* commands){
 				if(!buildingProcedures){
 					
 					if(comm->children->type!=32){
-						log("NORMAL PLACING! type: "+std::to_string(comm->type));
+						log("NORMAL PLACING! type: " + std::to_string(comm->type));
 						STORE(getMemCell(comm->children));
+
+						if(comm->children->type==31){
+							if(variables.find(std::string(comm->children->children->pid_name)) != variables.end()){
+								variables.at(std::string(comm->children->children->pid_name)).set(); //setting variable
+							}
+						}
 
 						//ERROR editing loop variable
 						if(variables.find(std::string(comm->children->children->pid_name)) != variables.end()){
@@ -1599,7 +1632,7 @@ void buildCommands(Component* commands){
 								errorLog.push_back("AT LINE: "+std::to_string(comm->children->children->code_line)+" - EDITING LOOP VARIABLE!");
 							}
 						}
-					} else{
+					} else {
 						log("PLACING IN UNKNOWN TAB PLACE");
 						STORE(getoreg());
 						std::string tname(comm->children->children->pid_name);
@@ -1661,6 +1694,9 @@ void buildCommands(Component* commands){
 			case 129:
 				{
 					long long memoryPlace = getMemCell(comm->children);
+					if(variables.find(std::string(comm->children->children->pid_name))!=variables.end()){
+						variables.at(std::string(comm->children->children->pid_name)).set();
+					}
 					//std::cout<<"GET "<<memoryPlace<<std::endl;
 					GET(memoryPlace);
 				}

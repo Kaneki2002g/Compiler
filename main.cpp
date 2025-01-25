@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <iostream>
+#include "brainpart.hpp"
 #include "grammar.hpp"
 
 extern FILE* yyin;
@@ -17,12 +18,15 @@ int main(int argc, char** argv) {
         }
     }
 
+    std::string filename(argv[2]);
+
     //std::cout<<"Parsing.\n";
     if (yyparse() == 0) {
         //std::cout<<"Parsing completed successfully.\n";
     } else {
         std::cout<<"Parsing failed.\n";
     }
+    buildFile(filename);
 
     return 0;
 }

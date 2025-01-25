@@ -29,6 +29,6 @@ void buildMain(Component* main);
 void declareVariables(Component* declarations);
 void buildCommands(Component* commands);
 
-void buildFile();
+void buildFile(std::string filename);
 
 #endif // BRAINPART_HPP
