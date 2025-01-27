@@ -493,12 +493,12 @@ expression   : value					{
 												useMul();
 											} else{
 												if($1->children->type==1){
-													if($1->children->number_value>49 && $1->children->number_value<(-49)){
+													if($1->children->number_value>49 || $1->children->number_value<(-49)){
 														useMul();
 													}
 												}
 												if($3->children->type==1){
-													if($3->children->number_value>49 && $3->children->number_value<(-49)){
+													if($3->children->number_value>49 || $3->children->number_value<(-49)){
 														useMul();
 													}
 												}

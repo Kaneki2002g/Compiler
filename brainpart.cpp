@@ -2,9 +2,11 @@
 
 bool buildingProcedures = false; //flag for building procedures
 bool encounteredErrors = false;
+bool endedProg = false;
+long long haltLine;
 
 int nest_loop=0;
-std::map<long long,int> int_loops;
+std::map<long long,long long> int_loops;
 
 
 void log(const std::string& message) {
@@ -32,6 +34,7 @@ long long memCounter = 1;
 void memInc(long long inc = 1){
 	memCounter += inc;
 }
+
 long long ASSLINE = 0;
 long long posCounter = 0;
 long long helpCounter = 0;
@@ -93,11 +96,16 @@ void buildFile(std::string filename){
 			std::cerr << "Nie można otworzyć pliku: " << filename << std::endl;
 			return;
 		}
-		
+		long long line = 0;
 		for (CommandStruct* comm : commands){
 			//temp
 			//std::cout<<comm->command<<" "<<comm->value<<std::endl;
-			plik << comm->command<<" "<<comm->value<< "\n";
+			if(comm->command=="SET" && int_loops.find(stoll(comm->value))!=int_loops.end() && line<haltLine){
+				plik << "LOAD " << std::to_string(int_loops.at(stoll(comm->value))) << "\n";
+			} else {
+				plik << comm->command<<" "<<comm->value<< "\n";
+			}
+			line++;
 		}
 		plik.close();
 	} else {
@@ -140,7 +148,7 @@ void SUBI(long long i){
 void SET(long long i){
 	//TODO: "SET -", abs(i)
 	toProg("SET",i);
-	if(nest_loop>0){
+	if(nest_loop>0 && !endedProg){
 		if(int_loops.find(i) != int_loops.end()){
 			int_loops.at(i)+=1;
 		}else{
@@ -363,6 +371,21 @@ long long getyreg(){
 	}
 	return yreg;
 }
+
+// OPTIMALISATION
+
+
+void initialize_common_ints(){
+	for (const auto& para : int_loops) {
+        //std::cout << "Klucz: " << para.first << ", Wartość: " << para.second << std::endl;
+		log(std::to_string(para.first)+" used "+std::to_string(para.second)+" times in loops!");
+		int_loops.at(para.first) = memCounter;
+		SET(para.first);
+		STORE(memCounter);
+		memInc();
+    }
+}
+
 
 //
 
@@ -1014,7 +1037,57 @@ void doArithmetic(Component* expr){
 			log("MULTIPLICATION");
 			if(first->children->type==1 && second->children->type==1){
 				log("BOTH NUMBERS");
-				SET(first->children->number_value*second->children->number_value);
+				SET(first->children->number_value * second->children->number_value); //<-won't work with big numbers
+				long long v1 = first->children->number_value;
+
+				long long v2 = second->children->number_value;
+
+				if(abs(v1)>=50 && abs(v2)>=50){
+					log("USING MULTIPLICATION PROCEDURE");
+					SET(v1);
+					STORE(getareg());
+					SET(v2);
+					STORE(getbreg());
+					SET(ASSLINE+3);
+					STORE(getretreg());
+					JUMP(mulPlace-ASSLINE);
+				} else{
+					if(abs(v1)<abs(v2)){
+						log("MULTIPLICATION BY FIRST");
+						if(v1>0){
+							SET(v2);
+							STORE(getoreg());
+							for(long long i = 1; i<v1; i++){
+								ADD(getoreg());
+							}
+						}else if(v1<0){
+							SET(-v2);
+							STORE(getoreg());
+							for(long long i = 1; i<abs(v1);i++){
+								ADD(getoreg());
+							}
+						}else{
+							SET(0);
+						}
+					} else {
+						log("MULTIPLICATION BY SECOND");
+						if(v2>0){
+							SET(v1);
+							STORE(getoreg());
+							for(long long i = 1; i<v2; i++){
+								ADD(getoreg());
+							}
+						}else if(v2<0){
+							SET(-v1);
+							STORE(getoreg());
+							for(long long i = 1; i<abs(v2);i++){
+								ADD(getoreg());
+							}
+						}else{
+							SET(0);
+						}
+					}
+				}
 			} else if((first->children->type==1 && first->children->number_value<50)||( second->children->type==1 && second->children->number_value<50)){
 				log("ONE NUMBER, ONE VARIABLE, ABS(NUMBER) SMALLER THAN 50");
 				long long times = first->children->number_value+second->children->number_value; //
@@ -1225,6 +1298,8 @@ void buildProgram(Component* all){
 	buildingProcedures=false;
 	mainLine = ASSLINE;
 	//REGISTERS INITIALISATION
+	long long j = getVPOS();
+	uJUMP(j);
 	if(forUses>0 || mulUses>0 || divUses>0 || modUses>0){
 		auto one = getonereg();
 		SET(1);
@@ -1235,9 +1310,15 @@ void buildProgram(Component* all){
 		SET(-1);
 		STORE(mone);
 	}
+	long long aline = ASSLINE;
 	buildMain(a->next);
 
 	HALT();
+	log("Program ends at: "+std::to_string(ASSLINE)+" line");
+	haltLine = ASSLINE;
+	endedProg = true;
+
+	setVPOS(j,(ASSLINE-(mainLine)));
 
 	if(mainLine>0){
 		log("JUMP" + std::to_string(mainLine)+" AT THE BEGINNING");
@@ -1250,6 +1331,10 @@ void buildProgram(Component* all){
 	for(int i=0;i<jumpLines.size();i++){
 		log(std::to_string(i+1)+": "+std::to_string(jumpLines[i]));
 	}
+	log("initializing ints used in loops!");
+
+	initialize_common_ints();
+	JUMP(mainLine-ASSLINE+1);
 }
 
 
