@@ -3,6 +3,9 @@
 bool buildingProcedures = false; //flag for building procedures
 bool encounteredErrors = false;
 
+int nest_loop=0;
+std::map<long long,int> int_loops;
+
 
 void log(const std::string& message) {
     static bool firstCall = true; 
@@ -137,6 +140,13 @@ void SUBI(long long i){
 void SET(long long i){
 	//TODO: "SET -", abs(i)
 	toProg("SET",i);
+	if(nest_loop>0){
+		if(int_loops.find(i) != int_loops.end()){
+			int_loops.at(i)+=1;
+		}else{
+			int_loops.emplace(i,1);
+		}
+	}
 }
 void HALF(){
 	toProg("HALF");
@@ -948,7 +958,10 @@ void doArithmetic(Component* expr){
 			log("ADDITION");
 			if(first->children->type==1 && second->children->type==1){
 				log("BOTH NUMBERS");
-				SET(first->children->number_value+second->children->number_value); //NOTE: MAY GO OUT OF LONG LONG BOUNDARIES SHOULD MAKE TEXT_CONVERSION_ADD
+				SET(first->children->number_value); //NOTE: MAY GO OUT OF LONG LONG BOUNDARIES SHOULD MAKE TEXT_CONVERSION_ADD
+				STORE(getoreg());
+				SET(second->children->number_value);
+				ADD(getoreg());
 			} else if(first->children->type!=1 && second->children->type==1){
 				log("FIRST VARIABLE SECOND NUMBER");
 				loadORset(first);
@@ -973,7 +986,10 @@ void doArithmetic(Component* expr){
 			log("SUBTRACTION");
 			if(first->children->type==1 && second->children->type==1){
 				log("BOTH NUMBERS");
-				SET(first->children->number_value-second->children->number_value); //NOTE: MAY GO OUT OF LONG LONG BOUNDARIES SHOULD MAKE TEXT_CONVERSION_ADD and SET(string)
+				SET(-second->children->number_value);
+				STORE(getoreg());
+				SET(first->children->number_value);
+				ADD(getoreg());
 			} else if(first->children->type!=1 && second->children->type==1){
 				log("FIRST VARIABLE SECOND NUMBER");
 				loadORset(first);
@@ -998,10 +1014,10 @@ void doArithmetic(Component* expr){
 			log("MULTIPLICATION");
 			if(first->children->type==1 && second->children->type==1){
 				log("BOTH NUMBERS");
-				SET(first->children->number_value*second->children->number_value); //NOTE: MAY GO OUT OF LONG LONG BOUNDARIES SHOULD MAKE TEXT_CONVERSION_ADD and SET(string)
+				SET(first->children->number_value*second->children->number_value);
 			} else if((first->children->type==1 && first->children->number_value<50)||( second->children->type==1 && second->children->number_value<50)){
 				log("ONE NUMBER, ONE VARIABLE, ABS(NUMBER) SMALLER THAN 50");
-				long long times = first->children->number_value+second->children->number_value;
+				long long times = first->children->number_value+second->children->number_value; //
 				if(times>0 ){ //NOTE: may be shortened with abs(long long) but for now it works
 					if(first->children->type==1){
 						loadORset(second);
@@ -1012,7 +1028,7 @@ void doArithmetic(Component* expr){
 					} else {
 						loadORset(first);
 						STORE(getoreg());
-						for(long long i=1;i<=times;i++){
+						for(long long i=1;i<times;i++){
 							ADD(getoreg());
 						}
 					}
@@ -1445,6 +1461,7 @@ void repeatUntil(Component* comm){
 void makefor(Component* loop){
 	log("");
 	log("STARTING FOR");
+	
 	Component* pid = loop->children;
 	Component* start = pid->next;
 	Component* finish = start->next;
@@ -1662,6 +1679,7 @@ void buildCommands(Component* commands){
 			case 124:{
 				//NOTE: NOT TESTED PROPERLY
 				//TODO: IF ALWAYS TRUE INFINITE LOOP, ELSE SKIP
+				nest_loop+=1;
 				log("");
 				log("WHILE LOOP (FAKE IF)");
 				long long curPoint=ASSLINE;
@@ -1676,17 +1694,24 @@ void buildCommands(Component* commands){
 				//while...do
 				log("END WHILE LOOP");
 				log("");
+				nest_loop-=1;
 				break;
 				}
 			case 125:{
+				nest_loop+=1;
 				repeatUntil(comm);
+				nest_loop-=1;
 			}
 			break;
 			case 126:
+			nest_loop+=1;
 			makefor(comm);
+			nest_loop-=1;
 			break;
 			case 127:
+			nest_loop+=1;
 			makefor(comm);
+			nest_loop-=1;
 			break;
 			case 128:
 			procedureCall(comm);
