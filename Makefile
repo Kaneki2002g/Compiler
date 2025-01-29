@@ -15,6 +15,7 @@ LOGIC_SRC = brainpart.cpp
 LEXER_CPP = lexic.cpp
 PARSER_CPP = grammar.cpp
 PARSER_HPP = grammar.hpp
+LOG = log.txt
 
 # Obiekty do kompilacji
 OBJECTS = $(LEXER_CPP:.cpp=.o) $(PARSER_CPP:.cpp=.o) main.o brainpart.o
@@ -39,6 +40,6 @@ $(PARSER_CPP) $(PARSER_HPP): $(PARSER_SRC)
 
 # Czyszczenie plików tymczasowych
 clean:
-	rm -f $(LEXER_CPP) $(PARSER_CPP) $(PARSER_HPP) *.o $(TARGET)
+	rm -f $(LEXER_CPP) $(PARSER_CPP) $(PARSER_HPP) *.o $(TARGET) $(LOG)
 
 .PHONY: all clean

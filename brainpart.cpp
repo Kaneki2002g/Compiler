@@ -5,6 +5,9 @@ bool encounteredErrors = false;
 bool endedProg = false;
 long long haltLine;
 
+
+long long codeline;		//current line from code
+
 int nest_loop=0;
 std::map<long long,long long> int_loops;
 
@@ -86,7 +89,7 @@ void toProg(std::string comm){
 
 void buildFile(std::string filename){
 	if(!encounteredErrors){
-		for(int i=0;i<jumpLines.size();i++){
+		for(long unsigned int i=0;i<jumpLines.size();i++){
 		//log(std::to_string(i+1)+": "+std::to_string(jumpLines[i]));
 		unknownJumps[i]->value = std::to_string(jumpLines[i]);
 		//std::cout<<jumpLines[i]<<std::endl;
@@ -113,7 +116,7 @@ void buildFile(std::string filename){
 		}
 		plik.close();
 	} else {
-		for(int i = 0; i<errorLog.size();i++){
+		for(long unsigned int i = 0; i<errorLog.size();i++){
 			std::cout<<errorLog[i]<<std::endl;
 		}
 	}
@@ -185,22 +188,22 @@ void HALT(){
 //UNKNOWN JUMPS
 void uJUMP(long long i){ 
 	//TEMP
-	JUMP(123456789);
+	JUMP(i);
 	unknownJumps.push_back(commands[commands.size()-1]);
 }
 void uJZERO(long long i){
 	//TEMP
-	JZERO(123456789);
+	JZERO(i);
 	unknownJumps.push_back(commands[commands.size()-1]);
 }
 void uJPOS(long long i){
 	//TEMP
-	JPOS(123456789);
+	JPOS(i);
 	unknownJumps.push_back(commands[commands.size()-1]);
 }
 void uJNEG(long long i){
 	//TEMP
-	JNEG(123456789);
+	JNEG(i);
 	unknownJumps.push_back(commands[commands.size()-1]);
 }
 /*
@@ -452,13 +455,13 @@ namespace vars{
 			Procedure(const std::string& name): name(name){}
 			Procedure(){}
 			void add_local_variable(Variable var, std::string vname){
-				if(alUsed(vname)){encounteredErrors=true; errorLog.push_back("AT PROCEDURE: \""+name+"\" id: \""+vname+"\" ALREADY IN USE!");}
+				if(alUsed(vname)){encounteredErrors=true; errorLog.push_back("AT LINE: "+std::to_string(codeline)+" (PROCEDURE "+name+"): \""+vname+"\" ALREADY IN USE!");}
 				localVariables.emplace(vname,var);
 				//std::cout<<"#DECLARING LOCAL VARIABLE: "<<vname<<"\n";
 				log("DECLARING LOCAL VARIABLE: "+vname);
 			}
 			void add_local_table(Table tab, std::string tname){
-				if(alUsed(tname)){encounteredErrors=true; errorLog.push_back("AT PROCEDURE: \""+name+"\" id: \""+tname+"\" ALREADY IN USE!");}
+				if(alUsed(tname)){encounteredErrors=true; errorLog.push_back("AT LINE: "+std::to_string(codeline)+" (PROCEDURE "+name+"): \""+tname+"\" ALREADY IN USE!");}
 				localTables.emplace(tname,tab);
 				log("DECLARING LOCAL TABLE: "+tname);}
 			void remove_local_variable(std::string it_name){
@@ -466,11 +469,11 @@ namespace vars{
 				localVariables.erase(it_name);
 			}
 			void add_given_variable(Variable var, std::string vname){
-				if(alUsed(vname)){encounteredErrors=true; errorLog.push_back("AT PROCEDURE: \""+name+"\" id: \""+vname+"\" ALREADY IN USE!");}
+				if(alUsed(vname)){encounteredErrors=true; errorLog.push_back("AT LINE: "+std::to_string(codeline)+" (PROCEDURE "+name+"): \""+vname+"\" ALREADY IN USE!");}
 				log("DECLARING GIVEN VARIABLE: " + vname);
 				givenVariables.emplace(vname,var);}
 			void add_given_table(Variable tab, std::string tname){
-				if(alUsed(tname)){encounteredErrors=true; errorLog.push_back("AT PROCEDURE: \""+name+"\" id: \""+tname+"\" ALREADY IN USE!");}
+				if(alUsed(tname)){encounteredErrors=true; errorLog.push_back("AT LINE: "+std::to_string(codeline)+" (PROCEDURE "+name+"): \""+tname+"\" ALREADY IN USE!");}
 				log("DECLARING GIVEN TABLE: " + tname);
 				givenTables.emplace(tname,tab);}
 			std::string getName(){return name;}
@@ -561,7 +564,7 @@ namespace vars{
 						log("ERROR SEARCHING VARIABLE: "+cname);
 						//TODO ERROR
 						encounteredErrors=true;
-						errorLog.push_back("AT LINE: "+std::to_string(call->code_line)+" VARIABLE "+cname+" NOT FOUND! err_type:1.2");
+						errorLog.push_back("AT LINE: "+std::to_string(call->code_line)+" VARIABLE "+cname+" NOT FOUND!");
 		
 						//std::cout<<"ERROR: variable not found or wrong type! line: "<<call->code_line<<"\n";//just for now
 						//std::cout<<"SEEKING: "<<cname<<"\n";
@@ -628,7 +631,7 @@ namespace vars{
 							//TODO ERROR
 							log("ERROR VARIABLE NOT FOUND");
 							encounteredErrors=true;
-							errorLog.push_back("AT LINE: "+std::to_string(ident->code_line)+" VARIABLE "+vname+" NOT FOUND! err_type:1.3");
+							errorLog.push_back("AT LINE: "+std::to_string(ident->code_line)+" VARIABLE "+vname+" NOT FOUND!");
 						}
 					}
 				}else if(ident->type==33){
@@ -683,7 +686,6 @@ namespace vars{
 				}
 			}
 			void read(Component* comm){
-				long long memoryPlace=-1;
 					if(comm->children->type==31){
 						std::string vname(comm->children->children->pid_name);
 						if(localVariables.find(vname) != localVariables.end()){
@@ -735,6 +737,61 @@ namespace vars{
 						STOREI(getoreg());
 					}
 			}
+			bool prqas(Component* value){
+				std::string fname(value->children->children->pid_name);
+				if(localVariables.find(fname)!=localVariables.end() || givenVariables.find(fname)!=givenVariables.end()|| localTables.find(fname)!=localTables.end()){
+					return false;
+				}
+				return true;
+			}
+			void add(Component* value){
+				Component* identifier = value->children;
+				std::string fname(identifier->children->pid_name);
+				if(identifier->type == 31){
+					if(localVariables.find(fname)!=localVariables.end()){
+						ADD(localVariables.at(fname).getPos());
+					}else if(givenVariables.find(fname)!=givenVariables.end()){
+						ADDI(givenVariables.at(fname).getPos());
+					}else{
+						encounteredErrors=true;
+						errorLog.push_back("AT LINE: "+std::to_string(identifier->code_line)+" VARIABLE\""+fname+"\" NOT FOUND!");
+					}
+				} else if(identifier->type == 33){
+					if(localVariables.find(fname)!=localVariables.end()){
+						ADD(localTables.at(fname).getPos(identifier->children->next->number_value));
+					}else if(givenVariables.find(fname)!=givenVariables.end()){
+						encounteredErrors=true;
+						errorLog.push_back("AT LINE: "+std::to_string(identifier->code_line)+" GOT HERE, SHOULD NOT!");
+					}else{
+						encounteredErrors=true;
+						errorLog.push_back("AT LINE: "+std::to_string(identifier->code_line)+" VARIABLE\""+fname+"\" NOT FOUND!");
+					}
+				}
+			}
+			void sub(Component* value){
+				Component* identifier = value->children;
+				std::string fname(identifier->children->pid_name);
+				if(identifier->type == 31){
+					if(localVariables.find(fname)!=localVariables.end()){
+						SUB(localVariables.at(fname).getPos());
+					}else if(givenVariables.find(fname)!=givenVariables.end()){
+						SUBI(givenVariables.at(fname).getPos());
+					}else{
+						encounteredErrors=true;
+						errorLog.push_back("AT LINE: "+std::to_string(identifier->code_line)+" VARIABLE\""+fname+"\" NOT FOUND!");
+					}
+				} else if(identifier->type == 33){
+					if(localVariables.find(fname)!=localVariables.end()){
+						SUB(localTables.at(fname).getPos(identifier->children->next->number_value));
+					}else if(givenVariables.find(fname)!=givenVariables.end()){
+						encounteredErrors=true;
+						errorLog.push_back("AT LINE: "+std::to_string(identifier->code_line)+" GOT HERE, SHOULD NOT!");
+					}else{
+						encounteredErrors=true;
+						errorLog.push_back("AT LINE: "+std::to_string(identifier->code_line)+" VARIABLE\""+fname+"\" NOT FOUND!");
+					}
+				}
+			}
 			private:
 			std::string name;
 			std::map<std::string, Variable> localVariables;
@@ -743,14 +800,12 @@ namespace vars{
 			std::map<std::string, Variable> givenTables; //Tables are given as variables! (blackboxes)
 			std::vector<bool> g_types;//given types
 			std::vector<long long> addresses;
-			long long startLine;
+			long long startLine;	//assemblyLine
 			bool usesProcedures = false;
 			long long ret;
 			bool alUsed(std::string vname){
 				return (localVariables.find(vname)!=localVariables.end() || localTables.find(vname)!=localTables.end() || givenTables.find(vname)!=givenTables.end() || givenVariables.find(vname)!=givenVariables.end());
 			}
-			bool existsVar(std::string vname){}
-			bool existsTab(std::string tname){}
 	};
 };
 
@@ -933,6 +988,7 @@ void declare_var(Component* declaration){
 		}
 		variables.emplace(name,var);
 	} else {
+		codeline = declaration->code_line;
 		currentProcedure->add_local_variable(var,name);
 	}
 	memInc();
@@ -948,6 +1004,7 @@ void declare_tab(Component* declaration){
 		}
 		tables.emplace(name,tab);
 	} else{
+		codeline = declaration->code_line;
 		currentProcedure->add_local_table(tab,name);
 	}
 	memInc((declaration->children->next->number_value)-(declaration->children->number_value)+1);
@@ -989,7 +1046,7 @@ long long getMemCell(Component* call){
 		}catch(const std::out_of_range& e){
 			//throw error at varline
 			encounteredErrors = true;
-			errorLog.push_back("AT LINE: "+std::to_string(call->code_line)+" VARIABLE "+name+" NOT FOUND! err_type:1.1");
+			errorLog.push_back("AT LINE: "+std::to_string(call->code_line)+" VARIABLE "+name+" NOT FOUND!");
 		}
 	} else if(call->type==33){//table[num]
 		std::string name(call->children->pid_name);
@@ -1029,6 +1086,26 @@ long long getMemCell(Component* call){
 }
 
 //ARITHMETIC/LOGIC FUNCTIONS
+/*REQUIERS ADDITIONAL STORING?*/
+bool rqas(Component* value){
+	if(value->type==41){
+		return true;
+	} else if (value->type==42){
+		Component* insides = value->children;//IDENTIFIER
+		if(insides->type==31){//PIDENTIFIER
+			return false;
+		}else if(insides->type==33){//PIDENTIFIER[NUM]
+			if(buildingProcedures){
+				return true;
+			}else{
+				return false;
+			}
+		}else if(insides->type==32){//PIDENTIFIER[PIDENTIFIER]
+			return true;
+		}
+	}
+	return true;
+}
 void loadORset(Component* value){
 	Component* check = value->children;
 	if(check->type==1){
@@ -1082,28 +1159,70 @@ void doArithmetic(Component* expr){
 			log("ADDITION");
 			if(first->children->type==1 && second->children->type==1){
 				log("BOTH NUMBERS");
-				SET(first->children->number_value); //NOTE: MAY GO OUT OF LONG LONG BOUNDARIES SHOULD MAKE TEXT_CONVERSION_ADD
+				SET(first->children->number_value); 
 				STORE(getoreg());
 				SET(second->children->number_value);
 				ADD(getoreg());
 			} else if(first->children->type!=1 && second->children->type==1){
 				log("FIRST VARIABLE SECOND NUMBER");
-				loadORset(first);
-				STORE(getoreg());
-				SET(second->children->number_value);
-				ADD(getoreg());	//NOTE: getMemCell should throw error when trying to get address of loop variable out of said loop
+				if(rqas(first)){
+					loadORset(first);
+					STORE(getoreg());
+					SET(second->children->number_value);
+					ADD(getoreg());
+				} else {
+					if(buildingProcedures){
+						if(currentProcedure->prqas(first)){
+							loadORset(first);
+							STORE(getoreg());
+							SET(second->children->number_value);
+							ADD(getoreg());
+						} else {
+							SET(second->children->number_value);
+							currentProcedure->add(first);
+						}
+					}else{
+						SET(second->children->number_value);
+						ADD(getMemCell(first->children));
+					}
+				}
 			}else if(first->children->type==1 && second->children->type!=1){
-				log("FIRST NUMBER SECOND VARIABLE");
-				loadORset(second);
-				STORE(getoreg());
-				SET(first->children->number_value);
-				ADD(getoreg());
+				if(rqas(second)){
+					loadORset(second);
+					STORE(getoreg());
+					SET(first->children->number_value);
+					ADD(getoreg());
+				} else {
+					if(buildingProcedures){
+						if(currentProcedure->prqas(second)){
+							loadORset(second);
+							STORE(getoreg());
+							SET(first->children->number_value);
+							ADD(getoreg());
+						} else {
+							SET(first->children->number_value);
+							currentProcedure->add(second);
+						}
+					}else{
+						SET(first->children->number_value);
+						ADD(getMemCell(second->children));
+					}
+				}
 			}else{
 				log("BOTH VARIABLES");
-				loadORset(first);
-				STORE(getoreg());
-				loadORset(second);
-				ADD(getoreg());
+				if(!rqas(first) && !rqas(second)){
+					loadORset(first);
+					if(buildingProcedures){
+						currentProcedure->add(second);
+					} else{
+						ADD(getMemCell(second->children));
+					}
+				}else{
+					loadORset(first);
+					STORE(getoreg());
+					loadORset(second);
+					ADD(getoreg());
+				}
 			}
 		break;
 		case 63:
@@ -1116,22 +1235,64 @@ void doArithmetic(Component* expr){
 				ADD(getoreg());
 			} else if(first->children->type!=1 && second->children->type==1){
 				log("FIRST VARIABLE SECOND NUMBER");
-				loadORset(first);
-				STORE(getoreg());
-				SET(-(second->children->number_value)); // a - b = -b + a
-				ADD(getoreg());
+				if(rqas(first)){
+					loadORset(first);
+					STORE(getoreg());
+					SET(-second->children->number_value);
+					ADD(getoreg());
+				} else {
+					if(buildingProcedures){
+						if(currentProcedure->prqas(first)){
+							loadORset(first);
+							STORE(getoreg());
+							SET(-second->children->number_value);
+							ADD(getoreg());
+						} else {
+							SET(-second->children->number_value);
+							currentProcedure->add(first);
+						}
+					}else{
+						SET(-second->children->number_value);
+						ADD(getMemCell(first->children));
+					}
+				}
 			}else if(first->children->type==1 && second->children->type!=1){
-				log("FIRST NUMBER SECOND VARIABLE");
-				loadORset(second);
-				STORE(getoreg());
-				SET(first->children->number_value);
-				SUB(getoreg());
+				if(rqas(second)){
+					loadORset(second);
+					STORE(getoreg());
+					SET(first->children->number_value);
+					SUB(getoreg());
+				} else {
+					if(buildingProcedures){
+						if(currentProcedure->prqas(second)){
+							loadORset(second);
+							STORE(getoreg());
+							SET(first->children->number_value);
+							SUB(getoreg());
+						} else {
+							SET(first->children->number_value);
+							currentProcedure->sub(second);
+						}
+					}else{
+						SET(first->children->number_value);
+						SUB(getMemCell(second->children));
+					}
+				}
 			}else{
 				log("BOTH VARIABLES");
-				loadORset(second);
-				STORE(getoreg());
-				loadORset(first);
-				SUB(getoreg());
+				if(!rqas(first) && !rqas(second)){
+					loadORset(first);
+					if(buildingProcedures){
+						currentProcedure->sub(second);
+					} else{
+						SUB(getMemCell(second->children));
+					}
+				}else{
+                    loadORset(second);
+					STORE(getoreg());
+					loadORset(first);
+					SUB(getoreg());
+				}
 			}
 		break;
 		case 64://NOTE: MUL,DIV,MOD - should be functions(if needed) with copied values instead of references
@@ -1265,6 +1426,9 @@ void doArithmetic(Component* expr){
 			}
 		break;
 		case 66:
+		if(first->children->type==1 && second->children->type==1){	
+			SET(first->children->number_value%second->children->number_value);
+		} else{
 			if(buildingProcedures){
 					currentProcedure->useDifferentProcedure();
 			}
@@ -1277,6 +1441,7 @@ void doArithmetic(Component* expr){
 			STORE(getretreg());
 			JUMP(divPlace-ASSLINE);
 			LOAD(getareg());
+		}
 		break;
 	}
 }
@@ -1329,7 +1494,7 @@ int compareA(Component* cond){
 }
 void compareB(Component* cond){ //NOTE:CompareB should give lines how much it took (int)
 	Component* first = cond->children;
-	Component* sec = first->next;
+	//Component* sec = first->next;
 	Component* fakesub = new Component();//fake subtracting
 	fakesub->type = 63;
 	fakesub->children=first;
@@ -1364,32 +1529,32 @@ void buildProgram(Component* all){
 	}
 	if(mulUses>0){
 		log("RESERVING REGISTERS FOR MULTIPLICATION, ADDING MULTIPLICATION");
-		auto r = getretreg();
-		auto a = getareg();
-		auto b = getbreg();
-		auto o = getoreg();
-		auto mo = getmonereg();
+		getretreg();
+		getareg();
+		getbreg();
+		getoreg();
+		getmonereg();
 		//mulPos = ASSLINE;
 		mulPlace = ASSLINE;
 		addMUL();
 	}
 	if(divUses>0){
 		log("RESERVING REGISTERS FOR DIVISION, ADDING DIVISION");
-		auto r = getretreg();
-		auto a = getareg();
-		auto b = getbreg();
-		auto o = getoreg();
-		auto mo = getmonereg();
+		getretreg();
+		getareg();
+		getbreg();
+		getoreg();
+		getmonereg();
 		divPlace = ASSLINE;
 		addDIV();
 	}
 	if(modUses>0){
 		log("RESERVING REGISTERS FOR MODULO, ADDING DIVISION");
-		auto r = getretreg();
-		auto a = getareg();
-		auto b = getbreg();
-		auto o = getoreg();
-		auto mo = getmonereg();
+		getretreg();
+		getareg();
+		getbreg();
+		getoreg();
+		getmonereg();
 		divPlace = ASSLINE;
 		addMOD();
 	}
@@ -1411,7 +1576,6 @@ void buildProgram(Component* all){
 		SET(-1);
 		STORE(mone);
 	}
-	long long aline = ASSLINE;
 	buildMain(a->next);
 
 	HALT();
@@ -1429,7 +1593,7 @@ void buildProgram(Component* all){
 	
 	log("END OF PROGRAM");
 	log("UNKNOWN JUMPS:");
-	for(int i=0;i<jumpLines.size();i++){
+	for(long unsigned int i=0;i<jumpLines.size();i++){
 		log(std::to_string(i+1)+": "+std::to_string(jumpLines[i]));
 	}
 	log("initializing ints used in loops!");
@@ -1464,12 +1628,14 @@ void makeProcedure(Component* procedure){
 	Component* pids = proc_head->children->next->children;
 	while(pids!=nullptr){ //args_decl
 		if(pids->type==21){//variable
+			codeline = pids->code_line;
 			std::string vname(pids->pid_name);
 			vars::Variable var = decl_vartab(pids);
 			proc.add_given_variable(var,vname);
 			proc.make_it_table(false);
 			proc.add_address(var.getPos());
 		}else if (pids->type==22){//table
+			codeline = pids->code_line;
 			//std::string name(pids->pid_name);
 			std::string tname(pids->pid_name);
 			vars::Variable tab = decl_vartab(pids);
@@ -1782,7 +1948,7 @@ void procedureCall(Component* proc_call){
 				int er = currentProcedure->ltvproc(vname);
 				if(er==1){
 					encounteredErrors = true;
-					errorLog.push_back("AT LINE: "+std::to_string(proc_call->code_line)+" VARIABLE "+vname+" NOT FOUND! err_type:1.0");
+					errorLog.push_back("AT LINE: "+std::to_string(proc_call->code_line)+" VARIABLE "+vname+" NOT FOUND!");
 				}
 				STORE(proc->addressfor(pos));
 			}else{
@@ -1981,7 +2147,7 @@ void buildCommands(Component* commands){
                             
                         }
 					} else{
-						//TODO: WRITING IN PROCEDURES
+						//TODO: BBETTER WRITING IN PROCEDURES
 						if(comm->children->type==41){
 							SET(comm->children->children->number_value);
 						}else if(comm->children->type==42){
@@ -1997,5 +2163,4 @@ void buildCommands(Component* commands){
 		comm=comm->next;
 	}
 	helpCounter=ASSLINE-start;
-	//std::cout<<"#THIS SUB-PART TOOK "<<helpCounter<<" LINES\n";
 }

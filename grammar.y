@@ -535,6 +535,7 @@ expression   : value					{
 											} else if ($3->children->number_value==2){
 												//use half
 												//and sub
+												useMod();
 											} else {
 												useMod();
 											}
