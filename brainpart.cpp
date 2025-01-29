@@ -153,7 +153,6 @@ void SUBI(long long i){
 	toProg("SUBI",i);
 }
 void SET(long long i){
-	//TODO: "SET -", abs(i)
 	toProg("SET",i);
 	if(nest_loop>0 && !endedProg){
 		if(int_loops.find(i) != int_loops.end()){
@@ -471,10 +470,12 @@ namespace vars{
 			void add_given_variable(Variable var, std::string vname){
 				if(alUsed(vname)){encounteredErrors=true; errorLog.push_back("AT LINE: "+std::to_string(codeline)+" (PROCEDURE "+name+"): \""+vname+"\" ALREADY IN USE!");}
 				log("DECLARING GIVEN VARIABLE: " + vname);
+				var.set();
 				givenVariables.emplace(vname,var);}
 			void add_given_table(Variable tab, std::string tname){
 				if(alUsed(tname)){encounteredErrors=true; errorLog.push_back("AT LINE: "+std::to_string(codeline)+" (PROCEDURE "+name+"): \""+tname+"\" ALREADY IN USE!");}
 				log("DECLARING GIVEN TABLE: " + tname);
+				tab.set();
 				givenTables.emplace(tname,tab);}
 			std::string getName(){return name;}
 			Variable* find_local_variable(std::string vname){
@@ -515,7 +516,6 @@ namespace vars{
 						LOAD(givenTables.at(tname).getPos());
 						return 0;
 					} catch(const std::out_of_range& e){
-						//TODO: error table not found
 						encounteredErrors = true;
 						return 1;
 					}
@@ -525,13 +525,16 @@ namespace vars{
 				try{
 					SET(localVariables.at(tname).getPos());
 					localVariables.at(tname).set();
+					if(localVariables.at(tname).isLVar()){
+						encounteredErrors = true;
+						return 2;
+					}
 					return 0;
 				} catch(const std::out_of_range& e){
 					try{
 						LOAD(givenVariables.at(tname).getPos());
 						return 0;
 					} catch(const std::out_of_range& e){
-						//TODO: error table not found
 						encounteredErrors = true;
 						return 1;
 					}
@@ -562,7 +565,6 @@ namespace vars{
 						log("LOADING GIVEN VARIABLE: "+cname);
 					}catch(const std::out_of_range& e){
 						log("ERROR SEARCHING VARIABLE: "+cname);
-						//TODO ERROR
 						encounteredErrors=true;
 						errorLog.push_back("AT LINE: "+std::to_string(call->code_line)+" VARIABLE "+cname+" NOT FOUND!");
 		
@@ -592,7 +594,6 @@ namespace vars{
 							log("LOADING GIVEN TABLE: "+tname);
 						}catch(const std::out_of_range& e){
 							log("ERROR SEARCHING TABLE: "+tname);
-							//TODO ERROR IF NON EI
 							encounteredErrors = true;
 							errorLog.push_back("AT LINE: "+std::to_string(call->code_line)+" TABLE NOT FOUND!");
 						}
@@ -628,7 +629,6 @@ namespace vars{
 							STOREI(givenVariables.at(vname).getPos());
 							log("STORING IN GIVEN VARIABLE");
 						}catch(const std::out_of_range& e){
-							//TODO ERROR
 							log("ERROR VARIABLE NOT FOUND");
 							encounteredErrors=true;
 							errorLog.push_back("AT LINE: "+std::to_string(ident->code_line)+" VARIABLE "+vname+" NOT FOUND!");
@@ -650,7 +650,6 @@ namespace vars{
 							STOREI(getareg());
 							log("STORING IN GIVEN TAB[NUM]");
 						}catch(const std::out_of_range& e){
-							//TODO ERROR
 							log("ERROR TABLE NOT FOUND");
 							encounteredErrors=true;
 							errorLog.push_back("AT LINE: "+std::to_string(ident->code_line)+" TABLE NOT FOUND!");
@@ -663,14 +662,13 @@ namespace vars{
 					loadVariable(ident->children->next); // load VARIABLE
 						try{
 							STORE(getareg());
-							LOAD(localTables.at(tname).getPos(0));
+							SET(localTables.at(tname).getPos(0));
 							ADD(getareg());
 							STORE(getareg());
 							LOAD(getoreg());
 							STOREI(getareg());
-							log("STORING IN LOCAL TAB[PID]: "+tname);
+							log("STORING  IN LOCAL TAB[PID]: "+tname);
 						//STORE(localVariables.at(tname).getPos(ident->children->next->number_value));
-						//TODO ERROR OUT OF BOUNDS
 						}catch(const std::out_of_range& e){
 							try{
 								ADD(givenTables.at(tname).getPos());
@@ -690,6 +688,7 @@ namespace vars{
 						std::string vname(comm->children->children->pid_name);
 						if(localVariables.find(vname) != localVariables.end()){
 							GET(localVariables.at(vname).getPos());
+							localVariables.at(vname).set();
 						} else if(givenVariables.find(vname) != givenVariables.end()){
 							GET(0);
 							STOREI(givenVariables.at(vname).getPos());
@@ -875,7 +874,7 @@ void addMUL(){
 	SUB(getoreg());
 	RTRN(getretreg());
 }
-void addDIV(){
+void addDIV(){ //TODO: REST=0 if B=0
 	LOAD(getbreg()); 	//dzielenie
 	JZERO(86);			//jesli 0 koniec, ustawienie rest = 0
 	JPOS(6);			//dla wiekszych od 0
@@ -1012,7 +1011,7 @@ void declare_tab(Component* declaration){
 
 vars::Variable decl_vartab(Component* declaration){ //NOTE: MAY NEED POINTERS
 	std::string name(declaration->pid_name);
-	vars::Variable var(name);//TODO:ERROR IF NAME IN DIFFERENT VARS IN PROCEDURE
+	vars::Variable var(name);
 	var.setPointer();
 	if(declaration->type==2){
 		var.setTablePointer();
@@ -1023,14 +1022,14 @@ vars::Variable decl_vartab(Component* declaration){ //NOTE: MAY NEED POINTERS
 
 vars::Variable declare_proc_var(Component* declaration){
 	std::string name(declaration->pid_name);
-	vars::Variable var(name);//TODO:ERROR IF NAME IN DIFFERENT VARS IN PROCEDURE
+	vars::Variable var(name);
 	memInc();
 	return var;
 }
 
 vars::Table declare_proc_tab(Component* declaration){
 	std::string name(declaration->pid_name);
-	vars::Table tab(name,declaration->children->number_value,declaration->children->next->number_value);//TODO:ERROR IF NAME IN DIFFERENT VARS IN PROCEDURE
+	vars::Table tab(name,declaration->children->number_value,declaration->children->next->number_value);
 	memInc((declaration->children->next->number_value)-(declaration->children->number_value)+1);
 	return tab;
 }
@@ -1144,10 +1143,7 @@ void loadORset(Component* value){
 }
 void doArithmetic(Component* expr){
 	log("DOING ARITHMETIC");
-	//ID := EXPR
-	//long long adr = getMemCell(varsetexp->children);
-	//Component* expr = varsetexp->children->next;
-	//VALUES
+	//TODO: NOT INITIALIZED ERRORS(older function doesn't work because of rqas())
 	Component* first = expr->children;
 	Component* second = expr->children->next;//NOTE: may be nullptr
 	switch(expr->type){
@@ -1407,8 +1403,15 @@ void doArithmetic(Component* expr){
 		case 65:
 			log("DIVISION");
 			if(first->children->type==1 && second->children->type==1){
-				
-				SET(first->children->number_value/second->children->number_value); //NOTE: MAY GO OUT OF LONG LONG BOUNDARIES SHOULD MAKE TEXT_CONVERSION_ADD and SET(string)
+				long long a=1;
+				long long b=1;
+				if(first->children->number_value<0){
+					a = -1;
+				}
+				if(second->children->number_value<0){
+					b=-1;
+				}
+				SET(a*b*(abs(first->children->number_value)/abs(second->children->number_value))); //NOTE: MAY GO OUT OF LONG LONG BOUNDARIES SHOULD MAKE TEXT_CONVERSION_ADD and SET(string)
 			} else if(second->children->type==1 && second->children->number_value==2){
 				loadORset(first);
 				HALF();
@@ -1605,6 +1608,7 @@ void buildProgram(Component* all){
 
 //PROCEDURE MAKING
 void makeProcedure(Component* procedure){
+	//TODO: ERROR IF PROCEDURE NAME USED
 	Component* proc_head=procedure->children;
 	Component* declarations;
 	Component* commands;
@@ -1677,11 +1681,14 @@ void buildProcedures(Component* procedures){
 void buildMain(Component* main){
 	log("");
 	log("STARTING MAIN BUILDING");
+	log("MAIN TYPE: "+std::to_string(main->type));
 	if(main->type==141){
 		log("DECLARING MAIN VARIABLES");
 		declareVariables(main->children);
+		buildCommands(main->children->next);
+	}else{
+		buildCommands(main->children);
 	}
-	buildCommands(main->children->next);
 }
 void declareVariables(Component* declarations){
 	//if we are here, then there's at least one variable declared
@@ -1742,7 +1749,7 @@ void ifthenelse(Component* comm){ //ifthen(else)
 				compareB(condition);
 				JNEG(2);
 				j1 = getVPOS();
-				uJPOS(j1);
+				uJUMP(j1);
 				}
 			break;
 			case 55:{//>=
@@ -1773,7 +1780,7 @@ void ifthenelse(Component* comm){ //ifthen(else)
 			}
 	}
 }
-void repeatUntil(Component* comm){
+void repeatUntil(Component* comm){//TODO: CHECK IF JUMPS ARE PROPERLY COUNTED(THEY ARE NOT)
 	Component* doings = comm->children;
 	Component* cond = doings->next;
 	int help=compareA(cond);
@@ -1950,12 +1957,21 @@ void procedureCall(Component* proc_call){
 					encounteredErrors = true;
 					errorLog.push_back("AT LINE: "+std::to_string(proc_call->code_line)+" VARIABLE "+vname+" NOT FOUND!");
 				}
+				if(er==2){
+					encounteredErrors=true;
+					errorLog.push_back("AT LINE: "+std::to_string(proc_call->code_line)+" INSERTING LOOP VARIABLE INTO PROCEDURE (FOR SAFETY REASONS FORBIDDEN)");
+				}
 				STORE(proc->addressfor(pos));
 			}else{
 				try{
 					SET(variables.at(vname).getPos());
 					variables.at(vname).set();
 					STORE(proc->addressfor(pos));
+
+					if(variables.at(vname).isLVar()){
+						encounteredErrors=true;
+						errorLog.push_back("AT LINE: "+std::to_string(proc_call->code_line)+" INSERTING LOOP VARIABLE INTO PROCEDURE (FOR SAFETY REASONS FORBIDDEN)");
+					}
 				} catch(const std::out_of_range& e){
 					encounteredErrors = true;
 					errorLog.push_back("AT LINE: "+std::to_string(proc_call->code_line)+" PROCEDURE EXPECTED A VARIABLE!");
@@ -1974,8 +1990,12 @@ void procedureCall(Component* proc_call){
 	JUMP(proc->getStartLine()-ASSLINE);
 }
 void buildCommands(Component* commands){
+	log("STARTING COMMANDS BUILDING: ");
 	long long start = ASSLINE;
+	log("HELP");
+	log("COMMANDS TYPE: "+std::to_string(commands->type));
 	Component* comm = commands->children;
+	log("COMMAND TYPE: "+std::to_string(comm->type));
 	while(comm!=nullptr){
 		//std::cout<<"TYPE: "<<comm->type;
 		switch(comm->type){
@@ -2069,7 +2089,7 @@ void buildCommands(Component* commands){
 			procedureCall(comm);
 			break;
 			case 129:
-				{
+				{	//TODO: ERROR IF READ ITERATOR
 					if(!buildingProcedures){
 						long long memoryPlace=-1;
 						if(comm->children->type==31){
@@ -2103,12 +2123,13 @@ void buildCommands(Component* commands){
 							STOREI(getbreg());
 						}
 					} else{
-						//TODO: READ IN PROCEDURES
+						//TODO: READ IN PROCEDURES(already done, but will leave it just in case)
 						currentProcedure->read(comm);
 					}
 				}
 			break;
 			case 1210:
+			//TODO: ERROR IF WRITE UNINITIALIZED
 				{
 					if(comm->children->type==41){
 						    SET(comm->children->children->number_value);
@@ -2147,7 +2168,7 @@ void buildCommands(Component* commands){
                             
                         }
 					} else{
-						//TODO: BBETTER WRITING IN PROCEDURES
+						//TODO: BETTER WRITING IN PROCEDURES
 						if(comm->children->type==41){
 							SET(comm->children->children->number_value);
 						}else if(comm->children->type==42){
