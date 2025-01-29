@@ -1,0 +1,11 @@
+PROGRAM IS
+	a,tab[0:5]
+BEGIN
+	WRITE 20;
+	READ a;
+	WRITE a;
+	READ tab[0];
+	WRITE tab[0];
+	READ tab[a];
+	WRITE tab[a];
+END

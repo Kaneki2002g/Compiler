@@ -676,12 +676,64 @@ namespace vars{
 								STOREI(getareg());
 								log("STORING IN GIVEN TAB[PID]: "+tname);
 							}catch(const std::out_of_range& e){
-								//TODO ERROR
 								encounteredErrors=true;
 								errorLog.push_back("AT LINE: "+std::to_string(ident->code_line)+" TABLE NOT FOUND!");
 							}
 						}
 				}
+			}
+			void read(Component* comm){
+				long long memoryPlace=-1;
+					if(comm->children->type==31){
+						std::string vname(comm->children->children->pid_name);
+						if(localVariables.find(vname) != localVariables.end()){
+							GET(localVariables.at(vname).getPos());
+						} else if(givenVariables.find(vname) != givenVariables.end()){
+							GET(0);
+							STOREI(givenVariables.at(vname).getPos());
+						} else{
+							encounteredErrors = true;
+							errorLog.push_back("AT LINE: "+std::to_string(comm->children->children->code_line)+" VARIABLE DOESN'T EXIST!");
+						}
+					}else if(comm->children->type==33){
+						std::string tname(comm->children->children->pid_name);
+						if(localTables.find(tname)!=localTables.end()){
+							GET(localTables.at(tname).getPos(comm->children->children->next->number_value));
+						}else if(givenTables.find(tname)!=givenTables.end()){
+							SET(comm->children->children->next->number_value);
+							ADD(givenTables.at(tname).getPos());
+							STORE(getoreg());
+							GET(0);
+							STOREI(getoreg());
+						} else{
+							encounteredErrors = true;
+							errorLog.push_back("AT LINE: "+std::to_string(comm->children->children->code_line)+" TABLE DOESN'T EXIST!");
+						}
+					}else{
+						std::string tname(comm->children->children->pid_name);
+						std::string vname(comm->children->children->next->pid_name);
+						if(localTables.find(tname)!=localTables.end()){
+							SET(localTables.at(tname).getPos(0));
+						}else if(givenTables.find(tname)!=givenTables.end()){
+							LOAD(givenTables.at(tname).getPos());
+						}else{
+							encounteredErrors = true;
+							errorLog.push_back("AT LINE: "+std::to_string(comm->children->children->code_line)+" TABLE DOESN'T EXIST!");
+						}
+
+						if(localVariables.find(vname) != localVariables.end()){
+							ADD(localVariables.at(vname).getPos());
+						} else if(givenVariables.find(vname) != givenVariables.end()){
+							ADDI(givenVariables.at(vname).getPos());
+						}else{
+							encounteredErrors = true;
+							errorLog.push_back("AT LINE: "+std::to_string(comm->children->children->code_line)+" VARIABLE DOESN'T EXIST!");
+						}
+
+						STORE(getoreg());
+						GET(0);
+						STOREI(getoreg());
+					}
 			}
 			private:
 			std::string name;
@@ -696,7 +748,9 @@ namespace vars{
 			long long ret;
 			bool alUsed(std::string vname){
 				return (localVariables.find(vname)!=localVariables.end() || localTables.find(vname)!=localTables.end() || givenTables.find(vname)!=givenTables.end() || givenVariables.find(vname)!=givenVariables.end());
-				}
+			}
+			bool existsVar(std::string vname){}
+			bool existsTab(std::string tname){}
 	};
 };
 
@@ -767,31 +821,31 @@ void addMUL(){
 	RTRN(getretreg());
 }
 void addDIV(){
-	SET(0);
-	STORE(getoreg());
-	LOAD(getbreg()); //dzielenie
-	JZERO(62);
-	JPOS(6);
-	SUB(getbreg());
-	SUB(getbreg());
-	STORE(getbreg());
-	LOAD(getmonereg());
-	JUMP(2);
-	LOAD(getonereg());
-	STORE(getbsign());
-	LOAD(getareg());
-	JZERO(53);
-	JPOS(6);
-	SUB(getareg());
-	SUB(getareg());
-	STORE(getareg());
-	LOAD(getmonereg());
-	JUMP(2);
-	LOAD(getonereg());
-	STORE(getasign());
+	LOAD(getbreg()); 	//dzielenie
+	JZERO(86);			//jesli 0 koniec, ustawienie rest = 0
+	JPOS(6);			//dla wiekszych od 0
+	SUB(getbreg());		//dla mniejszych od 0
+	SUB(getbreg());		//
+	STORE(getbreg());	//b = abs(b)
+	LOAD(getmonereg());	//znak = -1
+	JUMP(2);			//
+	LOAD(getonereg());	//znak = 1
+	STORE(getbsign());	//b_znak = znak`
+	LOAD(getareg());	//
+	JZERO(75);			//jesli a=0 koniec
+	JPOS(6);			//dla wiekszych od 0
+	SUB(getareg());		//dla mniejszych od 0
+	SUB(getareg());		//
+	STORE(getareg());	//a = abs(a)
+	LOAD(getmonereg());	//znak = -1
+	JUMP(2);			//
+	LOAD(getonereg());	//znak = 1
+	STORE(getasign());	//a_znak=znak
+	SET(0);				
+	STORE(getoreg()); 	//WYNIK = 0
 	LOAD(getasign());
 	ADD(getbsign());
-	STORE(getsareg());
+	STORE(getsareg());	//sub_add = a_znak+b_znak(jesli =0, to +- lub -+)
 	LOAD(getareg());
 	SUB(getbreg());
 	JNEG(25);
@@ -818,24 +872,44 @@ void addDIV(){
 	LOAD(getoreg());
 	ADD(getmreg());
 	STORE(getoreg());
-	JUMP(-26);
-	LOAD(getsareg());
-	JZERO(2);
-	JUMP(9); //do zmiany
-	LOAD(getareg());//1
-	JZERO(4);//2
+	JUMP(-26); 			//koniec dzielenia
+	LOAD(getsareg()); 	//suma znakow
+	JZERO(2);			//jesli +- lub -+
+	JUMP(10); 			//do zmiany
+	LOAD(getareg());	//zaladuj reszte
+	JZERO(4);			//jesli = 0 to pomin
+	LOAD(getoreg());	//
+	ADD(getonereg());	//wynik ++, ponieważ podloga ujemne
+	STORE(getoreg());
 	LOAD(getoreg());
-	ADD(getonereg());
-	STORE(getoreg());
 	SUB(getoreg());
-	SUB(getoreg());
+	SUB(getoreg());		//wynik ujemny, bo -+ lub +-
 	STORE(getoreg());
+	LOAD(getareg());	//ustawianie reszty
+	JZERO(20);			//do load oreg i ret #reszta=0
+	LOAD(getsareg());
+	JZERO(8);
 	LOAD(getbsign());
-	JPOS(4);
+	JPOS(17);			// do load oreg i ret #bo rest>0 i b>0
+	LOAD(getareg()); 
+	SUB(getareg());
+	SUB(getareg()); //areg - 2*areg
+	STORE(getareg()); //areg = -areg
+	JUMP(12); //do load oreg i ret
+	LOAD(getbsign());
+	JPOS(5);
 	LOAD(getareg());
 	SUB(getbreg());
 	STORE(getareg());
+	JUMP(6);	//do load oreg i ret
+	LOAD(getareg());
+	SUB(getareg());
+	SUB(getareg());
+	ADD(getbreg());
+	STORE(getareg());
 	LOAD(getoreg());
+	RTRN(getretreg());
+	STORE(getareg()); //ustawianie rest=0 #pierwszy jump daleki
 	RTRN(getretreg());
 }
 void addMOD(){
@@ -1830,27 +1904,93 @@ void buildCommands(Component* commands){
 			break;
 			case 129:
 				{
-					long long memoryPlace = getMemCell(comm->children);
-					if(variables.find(std::string(comm->children->children->pid_name))!=variables.end()){
-						variables.at(std::string(comm->children->children->pid_name)).set();
+					if(!buildingProcedures){
+						long long memoryPlace=-1;
+						if(comm->children->type==31){
+							if(variables.find(std::string(comm->children->children->pid_name))!=variables.end()){
+								variables.at(std::string(comm->children->children->pid_name)).set();
+								memoryPlace = getMemCell(comm->children);
+							}else{
+								encounteredErrors=true;
+								errorLog.push_back("AT LINE: "+std::to_string(comm->children->children->code_line)+" VARIABLE NOT FOUND!");
+							}
+							GET(memoryPlace);
+						}else if(comm->children->type==33){
+							if(tables.find(std::string(comm->children->children->pid_name))!=tables.end()){
+								memoryPlace = getMemCell(comm->children);
+							}else{
+								encounteredErrors=true;
+								errorLog.push_back("AT LINE: "+std::to_string(comm->children->children->code_line)+" TABLE NOT FOUND!");
+							}
+							GET(memoryPlace);
+						}else{
+							if(tables.find(std::string(comm->children->children->pid_name))!=tables.end()){
+								SET(tables.at(std::string(comm->children->children->pid_name)).getPos(0));
+								ADD(variables.at(std::string(comm->children->children->next->pid_name)).getPos());
+								STORE(getbreg());
+							}else{
+								encounteredErrors=true;
+								errorLog.push_back("AT LINE: "+std::to_string(comm->children->children->code_line)+" TABLE NOT FOUND!");
+							}
+							GET(getoreg());
+							LOAD(getoreg());
+							STOREI(getbreg());
+						}
+					} else{
+						//TODO: READ IN PROCEDURES
+						currentProcedure->read(comm);
 					}
-					//std::cout<<"GET "<<memoryPlace<<std::endl;
-					GET(memoryPlace);
 				}
 			break;
 			case 1210:
 				{
-					long long printMemPlace;
 					if(comm->children->type==41){
-						SET(comm->children->children->number_value);
-						printMemPlace = 0;
-					}else if(comm->children->type==42){
-						loadORset(comm->children);
-					}else{
-						printMemPlace = -1;
-						std::cout<<"SHOULD NOT GET HERE WITH TYPE:"<<comm->children->type<<"\n";
-					}
-					PUT(0);
+						    SET(comm->children->children->number_value);
+							PUT(0);
+					}else if(!buildingProcedures){
+						long long memoryPlace=-1;
+						if(comm->children->children->type==31){
+							if(variables.find(std::string(comm->children->children->children->pid_name))!=variables.end()){
+								variables.at(std::string(comm->children->children->children->pid_name)).set();
+								memoryPlace = getMemCell(comm->children->children);
+							}else{
+								encounteredErrors=true;
+								errorLog.push_back("AT LINE: "+std::to_string(comm->children->children->children->code_line)+" VARIABLE NOT FOUND!");
+							}
+							PUT(memoryPlace);
+						}else if(comm->children->children->type==33){
+							if(tables.find(std::string(comm->children->children->children->pid_name))!=tables.end()){
+								memoryPlace = getMemCell(comm->children->children);
+							}else{
+								encounteredErrors=true;
+								errorLog.push_back("AT LINE: "+std::to_string(comm->children->children->children->code_line)+" TABLE NOT FOUND!");
+							}
+							PUT(memoryPlace);
+						}else if(comm->children->children->type==32){
+							if(tables.find(std::string(comm->children->children->children->pid_name))!=tables.end()){
+								SET(tables.at(std::string(comm->children->children->children->pid_name)).getPos(0));
+								ADD(variables.at(std::string(comm->children->children->children->next->pid_name)).getPos());
+								STORE(getoreg());
+							}else{
+								encounteredErrors=true;
+								errorLog.push_back("AT LINE: "+std::to_string(comm->children->children->children->code_line)+" TABLE NOT FOUND!");
+							}
+							LOADI(getoreg());
+							PUT(0);
+						}else{
+                            
+                        }
+					} else{
+						//TODO: WRITING IN PROCEDURES
+						if(comm->children->type==41){
+							SET(comm->children->children->number_value);
+						}else if(comm->children->type==42){
+							loadORset(comm->children);
+						}else{
+							std::cout<<"SHOULD NOT GET HERE WITH TYPE:"<<comm->children->type<<"\n";
+						}
+						PUT(0);
+						}
 				}
 			break;
 		}
