@@ -103,7 +103,11 @@ void buildFile(std::string filename){
 			if(comm->command=="SET" && int_loops.find(stoll(comm->value))!=int_loops.end() && line<haltLine){
 				plik << "LOAD " << std::to_string(int_loops.at(stoll(comm->value))) << "\n";
 			} else {
-				plik << comm->command<<" "<<comm->value<< "\n";
+				std::string eline = "\n";
+				if(line == haltLine){
+					eline=" #OPTIM\n";
+				}
+				plik << comm->command<<" "<<comm->value<<eline;
 			}
 			line++;
 		}
@@ -448,19 +452,27 @@ namespace vars{
 			Procedure(const std::string& name): name(name){}
 			Procedure(){}
 			void add_local_variable(Variable var, std::string vname){
+				if(alUsed(vname)){encounteredErrors=true; errorLog.push_back("AT PROCEDURE: \""+name+"\" id: \""+vname+"\" ALREADY IN USE!");}
 				localVariables.emplace(vname,var);
 				//std::cout<<"#DECLARING LOCAL VARIABLE: "<<vname<<"\n";
 				log("DECLARING LOCAL VARIABLE: "+vname);
 			}
-			void add_local_table(Table tab, std::string tname){localTables.emplace(tname,tab);}
+			void add_local_table(Table tab, std::string tname){
+				if(alUsed(tname)){encounteredErrors=true; errorLog.push_back("AT PROCEDURE: \""+name+"\" id: \""+tname+"\" ALREADY IN USE!");}
+				localTables.emplace(tname,tab);
+				log("DECLARING LOCAL TABLE: "+tname);}
 			void remove_local_variable(std::string it_name){
 				log("REMOVING LOCAL VARIABLE: "+it_name);
 				localVariables.erase(it_name);
 			}
 			void add_given_variable(Variable var, std::string vname){
+				if(alUsed(vname)){encounteredErrors=true; errorLog.push_back("AT PROCEDURE: \""+name+"\" id: \""+vname+"\" ALREADY IN USE!");}
 				log("DECLARING GIVEN VARIABLE: " + vname);
 				givenVariables.emplace(vname,var);}
-			void add_given_table(Variable tab, std::string tname){givenTables.emplace(tname,tab);}
+			void add_given_table(Variable tab, std::string tname){
+				if(alUsed(tname)){encounteredErrors=true; errorLog.push_back("AT PROCEDURE: \""+name+"\" id: \""+tname+"\" ALREADY IN USE!");}
+				log("DECLARING GIVEN TABLE: " + tname);
+				givenTables.emplace(tname,tab);}
 			std::string getName(){return name;}
 			Variable* find_local_variable(std::string vname){
 				try{
@@ -682,6 +694,9 @@ namespace vars{
 			long long startLine;
 			bool usesProcedures = false;
 			long long ret;
+			bool alUsed(std::string vname){
+				return (localVariables.find(vname)!=localVariables.end() || localTables.find(vname)!=localTables.end() || givenTables.find(vname)!=givenTables.end() || givenVariables.find(vname)!=givenVariables.end());
+				}
 	};
 };
 
@@ -827,13 +842,21 @@ void addMOD(){
 	addDIV();
 }
 
+//CONFLICT SEEKING
 
+bool alreadyUsed(std::string name){
+	return (variables.find(name)!=variables.end() || tables.find(name)!=tables.end());
+}
 //VARIABLE MANIPULATION FUNCTIONS
 void declare_var(Component* declaration){
 	std::string name(declaration->pid_name);
 	vars::Variable var(name);
 	log("DECLARING VAR "+name);
 	if(!buildingProcedures){
+		if(alreadyUsed(name)){
+			encounteredErrors=true;
+			errorLog.push_back("AT LINE: "+std::to_string(declaration->code_line)+" NAME: \""+name+"\" ALREADY IN USE!");
+		}
 		variables.emplace(name,var);
 	} else {
 		currentProcedure->add_local_variable(var,name);
@@ -845,6 +868,10 @@ void declare_tab(Component* declaration){
 	vars::Table tab(name,declaration->children->number_value,declaration->children->next->number_value);
 	log("DECLARING TAB "+name+"["+std::to_string(declaration->children->number_value)+":"+std::to_string(declaration->children->next->number_value)+"]");
 	if(!buildingProcedures){
+		if(alreadyUsed(name)){
+			encounteredErrors=true;
+			errorLog.push_back("AT LINE: "+std::to_string(declaration->code_line)+" NAME: \""+name+"\" ALREADY IN USE!");
+		}
 		tables.emplace(name,tab);
 	} else{
 		currentProcedure->add_local_table(tab,name);
