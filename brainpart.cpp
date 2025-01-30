@@ -540,6 +540,19 @@ namespace vars{
 					}
 				}
 			}
+			int isSetVar(std::string vname){
+				if(localVariables.find(vname)!=localVariables.end()){
+					if(localVariables.at(vname).isSet()){
+						return 0;
+					}
+					return 1;
+				}else if (givenVariables.find(vname)!=givenVariables.end()){
+					return 0;
+				}else{
+					//non existent
+					return 2;
+				}
+			}
 			long long addressfor(int pos){return addresses.at(pos);}
 			void make_it_table(bool istable){g_types.push_back(istable);}
 			void add_address(long long addr){addresses.push_back(addr);}
@@ -602,7 +615,10 @@ namespace vars{
 					try{
 						LOAD(localTables.at(tname).getPos(call->children->next->number_value));
 						log("LOADING LOCAL TABLE: "+tname);
-						//TODO error if out of bounds
+						if(!localTables.at(tname).inBounds(call->children->next->number_value)){
+							encounteredErrors = true;
+							errorLog.push_back("AT LINE: "+std::to_string(call->code_line)+" OUT OF BOUNDS OF TABLE!");
+						}
 					}catch(const std::out_of_range& e){
 						try{
 							SET(call->children->next->number_value);
@@ -640,6 +656,10 @@ namespace vars{
 						STORE(localTables.at(tname).getPos(ident->children->next->number_value));
 						log("STORING IN LOCAL TAB[NUM]");
 						//TODO ERROR OUT OF BOUNDS
+						if(!localTables.at(tname).inBounds(ident->children->next->number_value)){
+							encounteredErrors = true;
+							errorLog.push_back("AT LINE: "+std::to_string(ident->code_line)+" OUT OF BOUNDS OF TABLE!");
+						}
 					}catch(const std::out_of_range& e){
 						try{
 							STORE(getoreg());
@@ -689,6 +709,10 @@ namespace vars{
 						if(localVariables.find(vname) != localVariables.end()){
 							GET(localVariables.at(vname).getPos());
 							localVariables.at(vname).set();
+							if(localVariables.at(vname).isLVar()){
+								encounteredErrors=true;
+								errorLog.push_back("AT LINE: "+std::to_string(comm->children->children->code_line)+" EDITING ITERATOR VARIABLE!");
+							}
 						} else if(givenVariables.find(vname) != givenVariables.end()){
 							GET(0);
 							STOREI(givenVariables.at(vname).getPos());
@@ -874,9 +898,9 @@ void addMUL(){
 	SUB(getoreg());
 	RTRN(getretreg());
 }
-void addDIV(){ //TODO: REST=0 if B=0
+void addDIV(){
 	LOAD(getbreg()); 	//dzielenie
-	JZERO(86);			//jesli 0 koniec, ustawienie rest = 0
+	JZERO(87);			//jesli 0 koniec, ustawienie rest = 0
 	JPOS(6);			//dla wiekszych od 0
 	SUB(getbreg());		//dla mniejszych od 0
 	SUB(getbreg());		//
@@ -886,7 +910,7 @@ void addDIV(){ //TODO: REST=0 if B=0
 	LOAD(getonereg());	//znak = 1
 	STORE(getbsign());	//b_znak = znak`
 	LOAD(getareg());	//
-	JZERO(75);			//jesli a=0 koniec
+	JZERO(76);			//jesli a=0 koniec
 	JPOS(6);			//dla wiekszych od 0
 	SUB(getareg());		//dla mniejszych od 0
 	SUB(getareg());		//
@@ -974,6 +998,22 @@ void addMOD(){
 
 bool alreadyUsed(std::string name){
 	return (variables.find(name)!=variables.end() || tables.find(name)!=tables.end());
+}
+
+int not_set_err(std::string vname){
+	if(buildingProcedures){
+		return currentProcedure->isSetVar(vname);
+	}else{
+		if(variables.find(vname)!=variables.end()){
+			if(variables.at(vname).isSet()){
+				return 0;
+			}else{
+				return 1;
+			}
+		}else{
+			return 2; //means it's non existent
+		}
+	}
 }
 //VARIABLE MANIPULATION FUNCTIONS
 void declare_var(Component* declaration){
@@ -1092,6 +1132,8 @@ bool rqas(Component* value){
 	} else if (value->type==42){
 		Component* insides = value->children;//IDENTIFIER
 		if(insides->type==31){//PIDENTIFIER
+			std::string vname(insides->children->pid_name);
+			not_set_err(vname);
 			return false;
 		}else if(insides->type==33){//PIDENTIFIER[NUM]
 			if(buildingProcedures){
@@ -1143,9 +1185,39 @@ void loadORset(Component* value){
 }
 void doArithmetic(Component* expr){
 	log("DOING ARITHMETIC");
-	//TODO: NOT INITIALIZED ERRORS(older function doesn't work because of rqas())
+	//TODO: NOT INITIALIZED ERRORS(older function doesn't work because of rqas())-- SHOULD WORK NOW
 	Component* first = expr->children;
 	Component* second = expr->children->next;//NOTE: may be nullptr
+	int err=0;
+	
+	if(first->children->type==31){
+		err=not_set_err(std::string(first->children->children->pid_name));
+	} else if(first->children->type==32){
+		err=not_set_err(std::string(first->children->children->next->pid_name));
+	}
+	if(err==1){
+		encounteredErrors=true;
+		errorLog.push_back("AT LINE: "+std::to_string(first->children->children->code_line)+" VARIABLE NOT SET!" );
+	}else if(err==2){
+		encounteredErrors=true;
+		errorLog.push_back("AT LINE: "+std::to_string(first->children->children->code_line)+" VARIABLE NON EXISTENT!" );
+	}
+	err = 0;
+	if(second!=nullptr){
+		if(second->children->type==31){
+			err=not_set_err(std::string(second->children->children->pid_name));
+		} else if(second->children->type==32){
+			err=not_set_err(std::string(second->children->children->next->pid_name));
+		}
+		if(err==1){
+			encounteredErrors=true;
+			errorLog.push_back("AT LINE: "+std::to_string(second->children->children->code_line)+" VARIABLE NOT SET!" );
+		}else if(err==2){
+			encounteredErrors=true;
+			errorLog.push_back("AT LINE: "+std::to_string(second->children->children->code_line)+" VARIABLE NON EXISTENT!" );
+		}
+	}
+	
 	switch(expr->type){
 		case 61:
 			log("ONLY ONE WORD IN EXPRESSION");
@@ -1608,12 +1680,14 @@ void buildProgram(Component* all){
 
 //PROCEDURE MAKING
 void makeProcedure(Component* procedure){
-	//TODO: ERROR IF PROCEDURE NAME USED
 	Component* proc_head=procedure->children;
 	Component* declarations;
 	Component* commands;
 	std::string name(proc_head->children->pid_name);
-
+	if(procedures.find(name)!=procedures.end()){
+		encounteredErrors=true;
+		errorLog.push_back("AT LINE: "+std::to_string(proc_head->code_line)+" PROCEDURE NAME \"" + name + "\" ALREADY IN USE!");
+	}
 	log("DECLARING PROCEDURE: "+ name);
 
 	vars::Procedure proc(name);
@@ -1792,24 +1866,24 @@ void repeatUntil(Component* comm){//TODO: CHECK IF JUMPS ARE PROPERLY COUNTED(TH
 		switch(cond->type){ //NOTE: another +1 may be  needed for jumps
 			case 51://==
 			JZERO(2);
-			JUMP(-(helpCounter+(b-a)));
+			JUMP(-(helpCounter+(b-a)+1));
 			break;
 			case 52://!=
-			JZERO(-(helpCounter+(b-a)));
+			JZERO(-(helpCounter+(b-a)+1));
 			break;
 			case 53://>
 			JPOS(2);
-			JUMP(-(helpCounter+(b-a)));
+			JUMP(-(helpCounter+(b-a)+1));
 			break;
 			case 54://<
 			JNEG(2);
 			JUMP(-(helpCounter+(b-a)+1));
 			break;
 			case 55://>=
-			JNEG(-(helpCounter+(b-a)));
+			JNEG(-(helpCounter+(b-a)+1));
 			break;
 			case 56://<=
-			JPOS(-(helpCounter+(b-a)));
+			JPOS(-(helpCounter+(b-a)+1));
 			break;
 		}
 	} else if(help==1){//infinite loop
@@ -2089,13 +2163,17 @@ void buildCommands(Component* commands){
 			procedureCall(comm);
 			break;
 			case 129:
-				{	//TODO: ERROR IF READ ITERATOR
+				{	//TODO: ERROR IF READ ITERATOR(DONE)
 					if(!buildingProcedures){
 						long long memoryPlace=-1;
 						if(comm->children->type==31){
 							if(variables.find(std::string(comm->children->children->pid_name))!=variables.end()){
 								variables.at(std::string(comm->children->children->pid_name)).set();
 								memoryPlace = getMemCell(comm->children);
+								if(variables.at(std::string(comm->children->children->pid_name)).isLVar()){
+									encounteredErrors=true;
+									errorLog.push_back("AT LINE: "+std::to_string(comm->children->children->code_line)+" EDITING ITERATOR VARIABLE!");
+								}
 							}else{
 								encounteredErrors=true;
 								errorLog.push_back("AT LINE: "+std::to_string(comm->children->children->code_line)+" VARIABLE NOT FOUND!");
@@ -2129,7 +2207,7 @@ void buildCommands(Component* commands){
 				}
 			break;
 			case 1210:
-			//TODO: ERROR IF WRITE UNINITIALIZED
+			//TODO: ERROR IF WRITE UNINITIALIZED(ALREADY DONE)
 				{
 					if(comm->children->type==41){
 						    SET(comm->children->children->number_value);
@@ -2138,7 +2216,10 @@ void buildCommands(Component* commands){
 						long long memoryPlace=-1;
 						if(comm->children->children->type==31){
 							if(variables.find(std::string(comm->children->children->children->pid_name))!=variables.end()){
-								variables.at(std::string(comm->children->children->children->pid_name)).set();
+								if(!variables.at(std::string(comm->children->children->children->pid_name)).isSet()){
+									encounteredErrors=true;
+									errorLog.push_back("AT LINE: "+std::to_string(comm->children->children->code_line)+" VARIABLE NOT SET!");
+								}
 								memoryPlace = getMemCell(comm->children->children);
 							}else{
 								encounteredErrors=true;
