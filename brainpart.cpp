@@ -5,6 +5,7 @@ bool encounteredErrors = false;
 bool endedProg = false;
 long long haltLine;
 
+bool logging=false;
 
 long long codeline;		//current line from code
 
@@ -12,27 +13,49 @@ int nest_loop=0;
 std::map<long long,long long> int_loops;
 
 
-void log(const std::string& message) {
-    static bool firstCall = true; 
-
-    std::ofstream logFile;
-    if (firstCall) {
-        logFile.open("log.txt", std::ios::out);
-		firstCall = false;
-    } else {
-        logFile.open("log.txt", std::ios::app);
-    }
-
-    if (!logFile.is_open()) {
-        std::cerr << "Nie można otworzyć pliku log.txt!" << std::endl;
-        return;
-    }
-
-    logFile << message << std::endl;
-
-   	logFile.close();
+long long python_modulo(long long a, long long b) {
+    return (a % b + b) % b;
 }
 
+void log(const std::string& message) {
+	if(logging){
+		static bool firstCall = true; 
+
+		std::ofstream logFile;
+		if (firstCall) {
+			logFile.open("log.txt", std::ios::out);
+			firstCall = false;
+		} else {
+			logFile.open("log.txt", std::ios::app);
+		}
+
+		if (!logFile.is_open()) {
+			std::cerr << "Nie można otworzyć pliku log.txt!" << std::endl;
+			return;
+		}
+
+		logFile << message << std::endl;
+
+		logFile.close();
+	}
+}
+//CLEAN-UP PROCEDURES
+void deleteNodes(Component* all){
+	if(all->next!=nullptr){
+		deleteNodes(all->next);
+	}
+	if(all->children!=nullptr){
+		deleteNodes(all->children);
+	}
+	delete all;
+}
+
+void clearCommands(std::vector<CommandStruct*> css){
+	for( CommandStruct* cs : css){
+		delete cs;
+	}
+}
+//
 long long memCounter = 1;
 void memInc(long long inc = 1){
 	memCounter += inc;
@@ -115,6 +138,8 @@ void buildFile(std::string filename){
 			line++;
 		}
 		plik.close();
+		
+		clearCommands(commands);
 	} else {
 		for(long unsigned int i = 0; i<errorLog.size();i++){
 			std::cout<<errorLog[i]<<std::endl;
@@ -1502,8 +1527,15 @@ void doArithmetic(Component* expr){
 		break;
 		case 66:
 		if(first->children->type==1 && second->children->type==1){	
-			SET(first->children->number_value%second->children->number_value);
-		} else{
+			SET(python_modulo(first->children->number_value,second->children->number_value));
+		} else if(second->children->type==1 && second->children->number_value==2){
+			loadORset(first);
+			HALF();
+			ADD(0);
+			STORE(getareg());
+			loadORset(first);
+			SUB(getareg());
+		}else{
 			if(buildingProcedures){
 					currentProcedure->useDifferentProcedure();
 			}
@@ -1675,6 +1707,7 @@ void buildProgram(Component* all){
 
 	initialize_common_ints();
 	JUMP(mainLine-ASSLINE+1);
+	deleteNodes(all);
 }
 
 

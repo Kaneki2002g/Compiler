@@ -1,0 +1,7 @@
+PROGRAM IS
+	a
+BEGIN
+	READ a;
+	a := a%2;
+	WRITE a;
+END
