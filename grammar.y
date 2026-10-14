@@ -4,6 +4,9 @@
 #include <cstring>
 #include <stdlib.h>
 #include <string.h>
+#include <memory>
+#include "src/CodeBlock.hpp"
+#include "src/mainBlock.hpp"
 #include "brainpart.hpp"
 #include "structs.h"
 extern int yylineno;
@@ -18,7 +21,7 @@ Component* lastnext(Component* comp);
 %union{
 	char* stringid;
     long long number;
-	struct Component* component;
+	std::unique_ptr<CodeBlock> component;
 }
 
 %token EQ NEQ GEQ LEQ GT LT SET
@@ -56,15 +59,15 @@ Component* lastnext(Component* comp);
 %%
 
 program_all  : procedures main		{
-										$$ = new Component();
-										$$->code_line=0;
-										$$->type=16;
-										$$->number_value=0;
-										$$->pid_name=nullptr;
-										$$->children=$1;
-										$1->next = $2;
-										$$->next=nullptr;
-										buildProgram($$);
+										// $$ = new Component();
+										// $$->code_line=0;
+										// $$->type=16;
+										// $$->number_value=0;
+										// $$->pid_name=nullptr;
+										// $$->children=$1;
+										// $1->next = $2;
+										// $$->next=nullptr;
+										// buildProgram($$);
 									}
 
 procedures   : procedures PROCEDURE proc_head IS declarations T_BEGIN commands T_END	{	
@@ -112,24 +115,18 @@ procedures   : procedures PROCEDURE proc_head IS declarations T_BEGIN commands T
 																							$$->next=nullptr;
 																						}
 
-main         : PROGRAM IS declarations T_BEGIN commands T_END	{	
-																	$$ = new Component();
-																	$$->code_line=yylineno;
-																	$$->type=141;
-																	$$->number_value=0;
-																	$$->pid_name=nullptr;
-																	$$->children=$3;
-																	$3->next=$5;
-																	$$->next=nullptr;
+main         : PROGRAM IS declarations T_BEGIN commands T_END	{
+																	MainBlock mBlock = std::make_unique<mainBlock>();
+																	mBlock->setCodeLine(yylineno);
+																	// TODO set Children vector
+																	mBlock->setVariables($3);
+																	mBlock->setChildren($5);
 																}
-             | PROGRAM IS T_BEGIN commands T_END				{	
-																	$$ = new Component();
-																	$$->code_line=yylineno;
-																	$$->type=142;
-																	$$->number_value=0;
-																	$$->pid_name=nullptr;
-																	$$->children=$4;
-																	$$->next=nullptr;
+             | PROGRAM IS T_BEGIN commands T_END				{
+																	MainBlock mBlock = std::make_unique<mainBlock>();
+																	mBlock->setCodeLine(yylineno);
+																	// TODO set Children vector
+																	mBlock->setChildren($4);
 																}
 
 commands     : commands command		{	
